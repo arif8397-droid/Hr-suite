@@ -3003,7 +3003,7 @@ const ROLES = {
 // Defaults
 const DEF_SET={workStart:'09:00',workEnd:'18:00',lateMin:15,earlyMin:30,workDays:5,workHrs:8};
 const DEF_FM={basicPct:60,hraPct:50,taFixed:0,maFixed:0,pfPct:8,taxPct:5};
-const DEF_QT={annual:15,sick:10,casual:7,mat:90,emer:3,pat:3,comp:6,study:5,lwp:0};
+const DEF_QT={annual:15,sick:10,casual:7,mat:90,pat:3,study:5,lwp:0};
 const DEF_WEEKEND={days:[5,6],workType:'gross30',multiplier:2,fixedAmt:0};
 const DEF_DED={absentType:'basic30',absentFixed:0,lateType:'none',latePerMin:0,latePerOcc:0};
 const DEF_HOL_PAY={festType:'gross30x',festMul:2,festFixed:0,govtType:'gross30x',govtMul:2,govtFixed:0};
@@ -4731,13 +4731,24 @@ function _jcDates(){
 
 // Status abbreviation map
 const JC_ABBR={Present:'P',Absent:'A',Late:'L','Early Out':'EO','Half Day':'H','Late & Early Out':'L+E',
-  'Annual Leave':'AL','Sick Leave':'SL','Casual Leave':'CL','Maternity/Paternity':'ML','Emergency Leave':'EL','Unpaid Leave':'UL',Leave:'Lv',
+  'Annual Leave (Earned Leave)':'AL','Annual Leave':'AL','Sick Leave':'SL','Casual Leave':'CL',
+  'Maternity Leave (112 days)':'ML','Maternity/Paternity':'ML','Paternity Leave':'PL',
+  'Special Leave':'SpL','Compensatory Leave':'CpL',
+  'Study/Training Leave':'StL','Unpaid Leave (LWP)':'UL','Unpaid Leave':'UL',Leave:'Lv',
   Off:'W','—':'—'};
 const JC_COLOR={Present:'#d8f3dc',Absent:'#fce8e1',Late:'#fdf4d8','Early Out':'#ede5f5','Half Day':'#e0f4f4','Late & Early Out':'#fce8e1',
-  'Annual Leave':'#e3eaf4','Sick Leave':'#e3eaf4','Casual Leave':'#e3eaf4','Maternity/Paternity':'#e3eaf4','Emergency Leave':'#e3eaf4','Unpaid Leave':'#e3eaf4',Leave:'#e3eaf4',
+  'Annual Leave (Earned Leave)':'#e3eaf4','Annual Leave':'#e3eaf4',
+  'Sick Leave':'#e3eaf4','Casual Leave':'#e3eaf4',
+  'Maternity Leave (112 days)':'#e3eaf4','Maternity/Paternity':'#e3eaf4','Paternity Leave':'#e3eaf4',
+  'Special Leave':'#fff3e0','Compensatory Leave':'#fdf4d8',
+  'Study/Training Leave':'#e3eaf4','Unpaid Leave (LWP)':'#f0f0f4','Unpaid Leave':'#f0f0f4',Leave:'#e3eaf4',
   Off:'#f0f0f0','—':''};
 const JC_CLS={Present:'jc-p',Absent:'jc-a',Late:'jc-l','Early Out':'jc-e','Half Day':'jc-h','Late & Early Out':'jc-a',
-  'Annual Leave':'jc-lv','Sick Leave':'jc-lv','Casual Leave':'jc-lv','Maternity/Paternity':'jc-lv','Emergency Leave':'jc-lv','Unpaid Leave':'jc-lv',Leave:'jc-lv',
+  'Annual Leave (Earned Leave)':'jc-lv','Annual Leave':'jc-lv',
+  'Sick Leave':'jc-lv','Casual Leave':'jc-lv',
+  'Maternity Leave (112 days)':'jc-lv','Maternity/Paternity':'jc-lv','Paternity Leave':'jc-lv',
+  'Special Leave':'jc-lv','Compensatory Leave':'jc-lv',
+  'Study/Training Leave':'jc-lv','Unpaid Leave (LWP)':'jc-lv','Unpaid Leave':'jc-lv',Leave:'jc-lv',
   Off:'jc-off','—':''};
 
 function _jcBuildDays(empId,dates){
@@ -4754,7 +4765,12 @@ function _jcBuildDays(empId,dates){
   });
 
   const summary={Present:0,Absent:0,Late:0,'Early Out':0,'Half Day':0,'Late & Early Out':0,Off:0};
-  const leaveSummary={'Annual Leave':0,'Sick Leave':0,'Casual Leave':0,'Maternity/Paternity':0,'Emergency Leave':0,'Unpaid Leave':0};
+  const leaveSummary={
+    'Annual Leave (Earned Leave)':0,'Sick Leave':0,'Casual Leave':0,
+    'Maternity Leave (112 days)':0,'Paternity Leave':0,
+    'Special Leave':0,'Compensatory Leave':0,
+    'Study/Training Leave':0,'Unpaid Leave (LWP)':0
+  };
 
   const days=dates.map(dt=>{
     const dn=new Date(dt).getDay();
@@ -4874,7 +4890,7 @@ function renderJobCard(){
           <span class="badge b-g">P=Present</span><span class="badge b-r">A=Absent</span>
           <span class="badge b-o">L=Late</span><span class="badge b-p">EO=Early Out</span>
           <span class="badge b-t">H=Half Day</span>
-          <span class="badge b-b">SL=Sick Leave · CL=Casual Leave · AL=Annual Leave · EL=Emergency · ML=Maternity · UL=Unpaid</span>
+          <span class="badge b-b">SL=Sick · CL=Casual · AL=Annual · SpL=Special · CpL=Compensatory · ML=Maternity · PL=Paternity · StL=Study · UL=Unpaid</span>
           <span class="badge b-x">W=Weekend/Off</span>
         </div>
       </div>
@@ -4935,7 +4951,7 @@ function printJobCard(){
     <div class="ei-item"><div class="lbl">Report Period</div><div class="val">${dateInfo.label}</div></div>
   </div>
   <div class="legend">
-    <b>Legend:</b> P=Present · A=Absent · L=Late · EO=Early Out · H=Half Day · L+E=Late&EarlyOut · SL=Sick Leave · CL=Casual Leave · AL=Annual Leave · EL=Emergency · ML=Maternity · UL=Unpaid · W=Weekend/Off
+    <b>Legend:</b> P=Present · A=Absent · L=Late · EO=Early Out · H=Half Day · L+E=Late&amp;EarlyOut · SL=Sick · CL=Casual · AL=Annual · SpL=Special · CpL=Compensatory · ML=Maternity · PL=Paternity · StL=Study · UL=Unpaid · W=Weekend/Off
   </div>
   <table><thead><tr><th>Day</th><th>Weekday</th><th>Status</th><th>Check In</th><th>Check Out</th><th>Late(m)</th><th>Early(m)</th><th>Note</th></tr></thead>
   <tbody>${rows.join('')}</tbody></table>
@@ -4972,7 +4988,11 @@ function exportJobCardExcel(){
 
   // Build HTML-based XLS that matches print format with colors
   const colorMap={Present:'#d8f3dc',Absent:'#fce8e1',Late:'#fdf4d8','Early Out':'#ede5f5','Half Day':'#e0f4f4','Late & Early Out':'#fce8e1',
-    'Annual Leave':'#e3eaf4','Sick Leave':'#e3eaf4','Casual Leave':'#e3eaf4','Maternity/Paternity':'#e3eaf4','Emergency Leave':'#e3eaf4','Unpaid Leave':'#e3eaf4',Leave:'#e3eaf4',
+    'Annual Leave (Earned Leave)':'#e3eaf4','Annual Leave':'#e3eaf4',
+    'Sick Leave':'#e3eaf4','Casual Leave':'#e3eaf4',
+    'Maternity Leave (112 days)':'#e3eaf4','Maternity/Paternity':'#e3eaf4','Paternity Leave':'#e3eaf4',
+    'Special Leave':'#fff3e0','Compensatory Leave':'#fdf4d8',
+    'Study/Training Leave':'#e3eaf4','Unpaid Leave (LWP)':'#f0f0f4','Unpaid Leave':'#f0f0f4',Leave:'#e3eaf4',
     Off:'#f0f0f0'};
 
   const rowsHtml=days.map(day=>{
@@ -5026,7 +5046,7 @@ ${rowsHtml}
   <td colspan="2" style="color:navy">Leave (SL/CL/AL)</td><td>${summary.Leave}</td>
   <td colspan="2" style="color:#999">Weekend (W): ${summary.Off}</td>
 </tr>
-<tr><td colspan="8" style="font-size:8pt;color:#888">P=Present · A=Absent · L=Late · EO=Early Out · H=Half Day · SL=Sick · CL=Casual · AL=Annual · EL=Emergency · ML=Maternity · W=Weekend</td></tr>
+<tr><td colspan="8" style="font-size:8pt;color:#888">P=Present · A=Absent · L=Late · EO=Early Out · H=Half Day · SL=Sick · CL=Casual · AL=Annual · SpL=Special · CpL=Compensatory · ML=Maternity · PL=Paternity · StL=Study · UL=Unpaid · W=Weekend</td></tr>
 </table></body></html>`;
 
   const blob=new Blob(['\uFEFF'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
@@ -5833,7 +5853,7 @@ function loadSettings(){
   setV('f-min-hours',FM.minHours||0);
   // Update unit labels
   fmToggleBasic();fmToggleHRA();fmToggleTA();fmToggleMA();fmTogglePF();fmToggleTax();
-  setV('q-sk',QT.sick||10);setV('q-ca',QT.casual||7);setV('q-mt',QT.mat||90);setV('q-em',QT.emer||3);setV('q-pat',QT.pat||3);setV('q-comp',QT.comp||6);setV('q-study',QT.study||5);setV('q-lwp',QT.lwp||0);
+  setV('q-sk',QT.sick||10);setV('q-ca',QT.casual||7);setV('q-mt',QT.mat||90);setV('q-pat',QT.pat||3);setV('q-study',QT.study||5);setV('q-lwp',QT.lwp||0);
   setV('co-nm',CO.name||'');setV('co-addr',CO.address||'');setV('co-ph',CO.phone||'');setV('co-em',CO.email||'');setV('co-tg',CO.tagline||'');
   // Deduction rules
   setV('ded-abs-type',DED.absentType||'basic30');setV('ded-abs-fixed',DED.absentFixed||0);
@@ -5994,7 +6014,7 @@ function saveCustomComps(){
   DB.s('customComps',comps);toast('✓ Custom components saved');renderCustomComps();
 }
 function saveQuota(){
-  try{requireAuth(true);}catch(e){return;}QT={annual:0,sick:+v('q-sk')||10,casual:+v('q-ca')||7,mat:+v('q-mt')||90,emer:+v('q-em')||3,pat:+v('q-pat')||3,comp:+v('q-comp')||6,study:+v('q-study')||5,lwp:+v('q-lwp')||0};DB.s('quota',QT);toast('✓ Quotas saved');}
+  try{requireAuth(true);}catch(e){return;}QT={annual:0,sick:+v('q-sk')||10,casual:+v('q-ca')||7,mat:+v('q-mt')||90,pat:+v('q-pat')||3,study:+v('q-study')||5,lwp:+v('q-lwp')||0};DB.s('quota',QT);toast('✓ Quotas saved');}
 function saveCo(){
   try{requireAuth(true);}catch(e){return;}CO={name:v('co-nm'),address:v('co-addr'),phone:v('co-ph'),email:v('co-em'),tagline:v('co-tg')};DB.s('company',CO);toast('✓ Company info saved');}
 
@@ -7360,8 +7380,21 @@ function printEmpProfileFull(id){
   const now=new Date();const joinDt=e.join?new Date(e.join):null;
   let svcStr='—';
   if(joinDt){const diff=now-joinDt;const yr=Math.floor(diff/(365.25*86400000));const mo=Math.floor((diff%(365.25*86400000))/(30.44*86400000));const dy=Math.floor((diff%(30.44*86400000))/86400000);svcStr=`${yr} Year${yr!==1?'s':''} ${mo} Month${mo!==1?'s':''} ${dy} Day${dy!==1?'s':''} (${Math.floor(diff/86400000)} Days)`;}
-  const leaveTypes=['CL','SL','LWP','RL','SPL','EL','EDL'];
-  const leaveTaken={};leaveTypes.forEach(t=>{leaveTaken[t]=lvs.filter(l=>l.status==='Approved'&&l.type&&l.type.toUpperCase().includes(t.toUpperCase())).reduce((s,l)=>s+(l.days||0),0);});
+  const leaveTypes=[
+    {code:'AL', label:'Annual Leave',    match:'Annual Leave'},
+    {code:'SL', label:'Sick Leave',      match:'Sick Leave'},
+    {code:'CL', label:'Casual Leave',    match:'Casual Leave'},
+    {code:'ML', label:'Maternity',       match:'Maternity'},
+    {code:'PL', label:'Paternity',       match:'Paternity Leave'},
+    {code:'SpL',label:'Special',         match:'Special Leave'},
+    {code:'CpL',label:'Compensatory',    match:'Compensatory Leave'},
+    {code:'StL',label:'Study/Training',  match:'Study/Training Leave'},
+    {code:'UL', label:'Unpaid (LWP)',    match:'Unpaid Leave'},
+  ];
+  const leaveTaken={};
+  leaveTypes.forEach(t=>{
+    leaveTaken[t.code]=lvs.filter(l=>l.status==='Approved'&&l.type&&l.type.includes(t.match)).reduce((s,l)=>s+(l.days||0),0);
+  });
   const incRows=incs.map(ic=>`<tr><td>${ic.date||'—'}</td><td>৳${N(ic.prevSal)}</td><td>৳${N(ic.newSal)}</td><td>+৳${N(ic.amount)} (${ic.pct}%)</td><td>${ic.reason||'—'}</td></tr>`).join('');
   const prs=DB.g('payroll').filter(p=>p.empId===id);
   const w=window.open('','_blank');
@@ -7413,11 +7446,11 @@ function printEmpProfileFull(id){
   </div>
   <div class="section-hd">LEAVE HISTORY</div>
   <table class="leave-tbl">
-    <thead><tr><th>Particulars</th>${leaveTypes.map(t=>`<th>${t}</th>`).join('')}</tr></thead>
+    <thead><tr><th>Particulars</th>${leaveTypes.map(t=>`<th>${t.code}<br><span style="font-weight:400;font-size:8.5px">${t.label}</span></th>`).join('')}</tr></thead>
     <tbody>
-      <tr><td style="text-align:left;font-weight:600">Leave Entitlement</td>${leaveTypes.map(()=>'<td>0</td>').join('')}</tr>
-      <tr><td style="text-align:left;font-weight:600">Leave Taken/Enjoyed</td>${leaveTypes.map(t=>`<td>${leaveTaken[t]||0}</td>`).join('')}</tr>
-      <tr><td style="text-align:left;font-weight:600">Balance of Leave</td>${leaveTypes.map(t=>`<td>${0-(leaveTaken[t]||0)}</td>`).join('')}</tr>
+      <tr><td style="text-align:left;font-weight:600">Leave Entitlement</td>${leaveTypes.map(()=>'<td>—</td>').join('')}</tr>
+      <tr><td style="text-align:left;font-weight:600">Leave Taken/Enjoyed</td>${leaveTypes.map(t=>`<td>${leaveTaken[t.code]||0}</td>`).join('')}</tr>
+      <tr><td style="text-align:left;font-weight:600">Balance of Leave</td>${leaveTypes.map(t=>`<td>${leaveTaken[t.code]?'-'+leaveTaken[t.code]:'—'}</td>`).join('')}</tr>
     </tbody>
   </table>
   <div class="section-hd">INCREMENT HISTORY</div>
