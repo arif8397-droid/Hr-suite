@@ -1142,8 +1142,27 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
 
     <!-- ADD EMPLOYEE -->
     <div id="sec-add-employee" class="section">
+      <!-- Mode bar -->
+      <div style="max-width:820px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-p" id="emp-mode-add-btn" onclick="setEmpFormMode('add')">＋ Add New Employee</button>
+        <button class="btn btn-s" id="emp-mode-edit-btn" onclick="setEmpFormMode('edit')">✏ Edit Existing Employee</button>
+        <div id="emp-edit-search-wrap" style="display:none;flex:1;min-width:220px;max-width:320px">
+          <div class="ls-wrap">
+            <span class="ls-icon">🔍</span>
+            <input class="ls-input" id="emp-edit-search" placeholder="Search employee to edit…" oninput="searchEmpForEdit()" style="padding-left:36px">
+            <div class="ls-drop" id="emp-edit-search-drop"></div>
+          </div>
+        </div>
+      </div>
       <div class="card" style="max-width:820px">
-        <div class="ch"><span class="ct">New Employee</span></div>
+        <div class="ch">
+          <span class="ct" id="emp-form-title">New Employee</span>
+          <div id="emp-edit-badge" style="display:none;align-items:center;gap:8px">
+            <span id="emp-edit-eid-show" style="font-family:var(--fm);font-size:12px;font-weight:700;color:var(--accent2);background:var(--accent-light);padding:4px 10px;border-radius:6px;letter-spacing:1px"></span>
+            <button class="btn btn-s btn-xs" onclick="setEmpFormMode('add')">✕ Cancel</button>
+          </div>
+        </div>
+        <input type="hidden" id="emp-edit-id">
         <div class="cb">
           <div style="display:flex;gap:18px;align-items:flex-start;margin-bottom:16px">
             <div>
@@ -1187,7 +1206,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
             <div class="fgrp"><label>Status</label><select id="e-st"><option>Active</option><option>Probation</option><option>On Leave</option></select></div>
           </div>
           <div class="frow">
-            <button class="btn btn-p" onclick="saveEmp()">Save Employee</button>
+            <button class="btn btn-p" id="emp-save-btn" onclick="saveEmpUnified()">Save Employee</button>
             <button class="btn btn-s" onclick="clearEmpForm()">Clear</button>
           </div>
         </div>
@@ -1270,9 +1289,9 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
           <div class="ch"><span class="ct">New Leave Request</span></div>
           <div class="cb">
             <div class="fg fg2">
-              <div class="fgrp"><label>Employee</label><div id="lv-em-pick" class="ls-wrap"></div><input type="hidden" id="lv-em"></div>
+              <div class="fgrp"><label>Employee</label><div id="lv-em-pick" class="ls-wrap"></div><input type="hidden" id="lv-em" onchange="updateLvBalancePreview()"></div>
               <div class="fgrp"><label>Leave Type</label>
-                <select id="lv-tp">
+                <select id="lv-tp" onchange="updateLvBalancePreview()">
                 <option>Annual Leave (Earned Leave)</option>
                 <option>Sick Leave</option>
                 <option>Casual Leave</option>
@@ -1287,14 +1306,16 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
                 <option>Unpaid Leave (LWP)</option>
               </select>
               </div>
-              <div class="fgrp"><label>From</label><input type="date" id="lv-fr"></div>
-              <div class="fgrp"><label>To</label><input type="date" id="lv-to"></div>
+              <div class="fgrp"><label>From</label><input type="date" id="lv-fr" onchange="updateLvBalancePreview()"></div>
+              <div class="fgrp"><label>To</label><input type="date" id="lv-to" onchange="updateLvBalancePreview()"></div>
               <div class="fgrp s2"><label>Reason</label><textarea id="lv-rs" placeholder="Reason..."></textarea></div>
             </div>
-            <div class="frow"><button class="btn btn-p" onclick="saveLv()">Submit</button></div>
+            <div id="lv-bal-preview" style="display:none;margin:10px 0 6px;border-radius:10px;overflow:hidden;border:2px solid var(--border)"><div id="lv-bal-preview-inner"></div></div>
+            <div id="lv-days-count" style="display:none;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px"></div>
+            <div class="frow"><button class="btn btn-p" onclick="saveLv()">Submit Leave Request</button></div>
           </div>
         </div>
-        <div class="card"><div class="ch"><span class="ct">Leave Balance</span></div><div class="cb" id="lv-bal"></div></div>
+        <div class="card"><div class="ch"><span class="ct">Leave Balance</div><div class="cb" id="lv-bal"></div></div>
       </div>
       <div class="card" style="margin-top:16px;max-width:900px">
         <div class="ch">
@@ -3602,7 +3623,7 @@ function openProfile(id){
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
       <button class="btn btn-pr btn-sm no-print" onclick="printEmpProfile('${id}')">🖨 Print Profile</button>
-      ${canEditEmployee(e)?`<button class="btn btn-p btn-sm" onclick="openEmpEdit('${id}')">✏ Edit</button>${editWindowLabel(e)?'<span style="font-size:10.5px;color:var(--info);align-self:center">⏱ '+editWindowLabel(e)+'</span>':''}`:`<button class="btn btn-s btn-sm" disabled style="opacity:.5" title="No edit access or window closed">✏ Edit Locked</button>`}
+
     </div>`;
   document.getElementById('prof-modal').classList.remove('hidden');
 }
@@ -3888,11 +3909,23 @@ function processAttendance(isReprocess){
 function saveLv(){
   try{requireAuth(false);}catch(e){return;}
   const empId=v('lv-em'),fr=v('lv-fr'),to=v('lv-to');
-  if(!empId||!fr||!to){toast('Fill all fields');return;}
+  if(!empId||!fr||!to){toast('Fill employee, dates'); return;}
+  if(to<fr){toast('⚠ To date must be on or after From date'); return;}
   const days=Math.ceil((new Date(to)-new Date(fr))/86400000)+1;
+  const lvType=v('lv-tp');
+  const bal=getLvBalance(empId,lvType);
+  if(!bal.isUnlimited && days>bal.available){
+    toast('⛔ Only '+bal.available+' day(s) available for '+lvType+'. Reduce days or choose Unpaid Leave (LWP).',5000);
+    updateLvBalancePreview();
+    return;
+  }
   const lvs=DB.g('leaves');
-  lvs.push({id:DB.id(),empId,type:v('lv-tp'),from:fr,to,days,reason:v('lv-rs'),status:'Pending',created:Date.now()});
-  DB.s('leaves',lvs);renderLvRows();renderLvBal();toast('✓ Submitted');
+  lvs.push({id:DB.id(),empId,type:lvType,from:fr,to,days,reason:v('lv-rs'),status:'Pending',created:Date.now()});
+  DB.s('leaves',lvs);
+  renderLvRows();renderLvBal();
+  const wp=document.getElementById('lv-bal-preview');if(wp)wp.style.display='none';
+  const dc=document.getElementById('lv-days-count');if(dc)dc.style.display='none';
+  toast('✓ Leave submitted ('+days+' day'+(days>1?'s':'')+')');
 }
 function renderLvRows(){
   const sq=(v('lv-srch')||'').toLowerCase(), fst=v('lv-fst')||'';
@@ -7470,6 +7503,292 @@ function expAccessCSV(){
   a.click();
   toast('✓ Access-compatible CSV exported ('+Object.keys(tables).length+' tables)');
 }
+
+
+
+// ══════════════════════════════════════════════════════
+//  LEAVE BALANCE ENGINE
+// ══════════════════════════════════════════════════════
+const LV_QUOTA_KEY={
+  'Annual Leave (Earned Leave)':'annual',
+  'Sick Leave':'sick',
+  'Casual Leave':'casual',
+  'Maternity Leave (112 days)':'mat',
+  'Paternity Leave':null,
+  'Emergency Leave':'emer',
+  'Eid-ul-Fitr Leave':null,
+  'Eid-ul-Adha Leave':null,
+  'Festival Leave':null,
+  'Compensatory Leave':null,
+  'Study/Training Leave':null,
+  'Unpaid Leave (LWP)':null,
+  // legacy keys
+  'Annual Leave':'annual',
+  'Sick Leave':'sick',
+  'Casual Leave':'casual',
+  'Maternity/Paternity':'mat',
+  'Emergency Leave':'emer',
+  'Unpaid Leave':null,
+};
+
+function _calcAlEarned(empId){
+  const AL_RATE=18;
+  const WS=['Present','Late','Early Out','Half Day','Late & Early Out'];
+  return Math.floor(DB.g('attendance').filter(a=>a.empId===empId&&WS.includes(a.status)).length/AL_RATE);
+}
+
+function _lvTaken(empId,quotaKey){
+  const matchTypes=Object.entries(LV_QUOTA_KEY).filter(([,v])=>v===quotaKey).map(([k])=>k);
+  return DB.g('leaves').filter(l=>l.empId===empId&&l.status==='Approved'&&matchTypes.includes(l.type)).reduce((s,l)=>s+(l.days||0),0);
+}
+
+function getLvBalance(empId,lvType){
+  const QT2=DB.go('quota',DEF_QT);
+  const qKey=LV_QUOTA_KEY[lvType];
+  if(qKey===null||qKey===undefined) return {available:Infinity,taken:0,quota:Infinity,isUnlimited:true,isEarned:false};
+  let quota,taken,isEarned=false;
+  if(qKey==='annual'){
+    isEarned=true;
+    quota=_calcAlEarned(empId);
+    taken=_lvTaken(empId,'annual');
+  } else {
+    const QV={sick:QT2.sick||10,casual:QT2.casual||7,mat:QT2.mat||90,emer:QT2.emer||3};
+    quota=QV[qKey]||0;
+    taken=_lvTaken(empId,qKey);
+  }
+  return {available:Math.max(0,quota-taken),taken,quota,isUnlimited:false,isEarned};
+}
+
+function updateLvBalancePreview(){
+  const empId=v('lv-em'),lvType=v('lv-tp'),fr=v('lv-fr'),to=v('lv-to');
+  const wrap=document.getElementById('lv-bal-preview');
+  const inner=document.getElementById('lv-bal-preview-inner');
+  const dc=document.getElementById('lv-days-count');
+  if(!wrap||!inner) return;
+  if(!empId||!lvType){wrap.style.display='none';if(dc)dc.style.display='none';return;}
+  const bal=getLvBalance(empId,lvType);
+  const emp=DB.g('employees').find(e=>e.id===empId);
+  const empName=emp?emp.fn+' '+emp.ln:'';
+  let reqDays=0;
+  if(fr&&to&&to>=fr) reqDays=Math.ceil((new Date(to)-new Date(fr))/86400000)+1;
+  // Days count line
+  if(dc){
+    if(reqDays>0){dc.textContent='📅 Requesting '+reqDays+' day'+(reqDays>1?'s':'')+' ('+fr+' → '+to+')';dc.style.display='block';}
+    else dc.style.display='none';
+  }
+  let h='',borderColor='var(--border2)';
+  if(bal.isUnlimited){
+    borderColor='var(--info)';
+    h=`<div style="background:var(--info-bg);padding:13px 16px;display:flex;gap:12px;align-items:center">
+      <span style="font-size:22px">ℹ️</span>
+      <div>
+        <div style="font-weight:700;color:var(--info);font-size:13.5px">${lvType}</div>
+        <div style="font-size:12px;color:var(--info);margin-top:3px">No quota limit · ${reqDays>0?'Requesting <b>'+reqDays+' day'+(reqDays>1?'s':'')+'</b>':'Select dates to see request details'}</div>
+      </div>
+    </div>`;
+  } else {
+    const over=reqDays>0&&reqDays>bal.available;
+    const pct=bal.quota>0?Math.min((bal.taken/bal.quota)*100,100):0;
+    borderColor=over?'var(--danger)':'var(--success)';
+    const bgColor=over?'var(--danger-bg)':'var(--success-bg)';
+    const mainColor=over?'var(--danger)':'var(--success)';
+    const barColor=over?'var(--danger)':(pct>80?'var(--warn)':'var(--success)');
+    const afterDays=reqDays>0?bal.available-reqDays:null;
+    h=`<div style="background:${bgColor};padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-weight:700;font-size:13.5px;color:${mainColor}">${lvType}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${empName}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--fm);font-size:26px;font-weight:800;color:${mainColor};line-height:1">${bal.available}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px">days available</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        <div style="background:rgba(255,255,255,0.65);border-radius:8px;padding:9px;text-align:center">
+          <div style="font-weight:800;font-size:17px;color:var(--text)">${bal.quota}</div>
+          <div style="font-size:9.5px;color:var(--muted);margin-top:2px">${bal.isEarned?'Days Earned':'Annual Quota'}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.65);border-radius:8px;padding:9px;text-align:center">
+          <div style="font-weight:800;font-size:17px;color:var(--warn)">${bal.taken}</div>
+          <div style="font-size:9.5px;color:var(--muted);margin-top:2px">Already Taken</div>
+        </div>
+        <div style="background:${over?'rgba(192,57,43,0.15)':'rgba(255,255,255,0.65)'};border-radius:8px;padding:9px;text-align:center;border:${over?'2px solid var(--danger)':'none'}">
+          <div style="font-weight:800;font-size:17px;color:${over?'var(--danger)':reqDays>0?'var(--info)':'var(--muted)'}">${reqDays>0?reqDays:'—'}</div>
+          <div style="font-size:9.5px;color:var(--muted);margin-top:2px">Requested</div>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,0.08);border-radius:4px;height:7px;overflow:hidden;margin-bottom:9px">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .4s ease"></div>
+      </div>
+      ${over
+        ?`<div style="display:flex;align-items:center;gap:8px;background:var(--danger);color:#fff;padding:9px 13px;border-radius:8px;font-size:12.5px;font-weight:600">
+            <span style="font-size:16px">⛔</span>
+            Cannot submit — requesting <b>${reqDays} days</b> but only <b>${bal.available} days</b> available. Reduce date range or use <b>Unpaid Leave (LWP)</b>.
+          </div>`
+        :reqDays>0
+          ?`<div style="font-size:12px;color:${mainColor};font-weight:600;display:flex;align-items:center;gap:6px">
+              <span>✅</span> Sufficient balance · ${afterDays} day${afterDays!==1?'s':''} remaining after approval
+            </div>`
+          :`<div style="font-size:11.5px;color:var(--muted)">Select From & To dates to validate your request</div>`
+      }
+    </div>`;
+  }
+  inner.innerHTML=h;
+  wrap.style.borderColor=borderColor;
+  wrap.style.display='block';
+}
+
+// ══════════════════════════════════════════════════════
+//  ADD EMPLOYEE — UNIFIED FORM (ADD + EDIT MODE)
+// ══════════════════════════════════════════════════════
+let _empFormMode='add';
+
+function setEmpFormMode(mode){
+  _empFormMode=mode;
+  const addBtn=document.getElementById('emp-mode-add-btn');
+  const editBtn=document.getElementById('emp-mode-edit-btn');
+  const sw=document.getElementById('emp-edit-search-wrap');
+  const title=document.getElementById('emp-form-title');
+  const badge=document.getElementById('emp-edit-badge');
+  const saveBtn=document.getElementById('emp-save-btn');
+  const editId=document.getElementById('emp-edit-id');
+  if(mode==='add'){
+    if(addBtn){addBtn.className='btn btn-p';}
+    if(editBtn){editBtn.className='btn btn-s';}
+    if(sw)sw.style.display='none';
+    if(title)title.textContent='New Employee';
+    if(badge)badge.style.display='none';
+    if(saveBtn)saveBtn.textContent='Save Employee';
+    if(editId)editId.value='';
+    clearEmpForm();
+  } else {
+    if(addBtn){addBtn.className='btn btn-s';}
+    if(editBtn){editBtn.className='btn btn-p';}
+    if(sw)sw.style.display='flex';
+    if(title)title.textContent='Edit Employee';
+    if(badge)badge.style.display='flex';
+    if(saveBtn)saveBtn.textContent='Update Employee';
+    if(editId)editId.value='';
+    clearEmpForm();
+  }
+}
+
+function searchEmpForEdit(){
+  const q=(document.getElementById('emp-edit-search')?.value||'').toLowerCase().trim();
+  const drop=document.getElementById('emp-edit-search-drop');
+  if(!drop)return;
+  if(!q){drop.classList.remove('open');return;}
+  const emps=DB.g('employees').filter(e=>
+    (e.fn+' '+e.ln+' '+(e.eid||'')+' '+(e.dept||'')+' '+(e.bu||'')).toLowerCase().includes(q)
+  ).slice(0,8);
+  if(!emps.length){
+    drop.innerHTML='<div class="ls-opt ls-empty">No employee found</div>';
+    drop.classList.add('open');return;
+  }
+  drop.innerHTML=emps.map(e=>`
+    <div class="ls-opt" onclick="loadEmpForEdit('${e.id}')">
+      <div class="ls-av" style="background:var(--accent2)">${ini(e.fn,e.ln)}</div>
+      <div><div class="ls-nm">${e.fn} ${e.ln}</div>
+      <div class="ls-meta">${e.eid||''} · ${e.dept||''} · ${e.status||''}</div></div>
+    </div>`).join('');
+  drop.classList.add('open');
+}
+
+function loadEmpForEdit(id){
+  const e=DB.g('employees').find(x=>x.id===id);
+  if(!e)return;
+  const drop=document.getElementById('emp-edit-search-drop');
+  if(drop)drop.classList.remove('open');
+  const srch=document.getElementById('emp-edit-search');
+  if(srch)srch.value=e.fn+' '+e.ln;
+  document.getElementById('emp-edit-id').value=id;
+  const badge=document.getElementById('emp-edit-badge');
+  const eidShow=document.getElementById('emp-edit-eid-show');
+  if(badge)badge.style.display='flex';
+  if(eidShow)eidShow.textContent=e.eid||'—';
+  const sv=(fid,val)=>{const el=document.getElementById(fid);if(el)el.value=val||'';};
+  sv('e-fn',e.fn);sv('e-ln',e.ln);sv('e-em',e.email);
+  sv('e-ph',e.phone);sv('e-dob',e.dob);sv('e-nid',e.nid);
+  sv('e-addr',e.address);sv('e-sal',e.salary);sv('e-join',e.join);
+  const ss=(fid,val)=>{const el=document.getElementById(fid);if(el&&val!=null)el.value=val;};
+  ss('e-gen',e.gender);ss('e-type',e.type);ss('e-st',e.status);
+  // BU cascade
+  fillBuSel('e-bu');ss('e-bu',e.bu);
+  fillDeptSel('e-dept');ss('e-dept',e.dept);
+  fillSecSel('e-sec','e-dept');ss('e-sec',e.section);
+  fillSubSel('e-sub','e-sec','e-dept');ss('e-sub',e.subsection);
+  fillDesigSel();ss('e-title',e.title);
+  fillShiftSel();ss('e-shift',e.shift);
+  const prev=document.getElementById('e-eid-preview');
+  if(prev)prev.textContent=e.eid||'—';
+  if(e.photo){
+    const pp=document.getElementById('photo-prev');
+    if(pp)pp.innerHTML=`<img src="${e.photo}" style="width:100%;height:100%;object-fit:cover">`;
+    photoB64=e.photo;
+  }
+  const saveBtn=document.getElementById('emp-save-btn');
+  if(saveBtn)saveBtn.textContent='Update Employee';
+  toast('📋 Loaded: '+e.fn+' '+e.ln+' — edit and click Update Employee');
+}
+
+function saveEmpUnified(){
+  const editId=(document.getElementById('emp-edit-id')?.value||'').trim();
+  if(_empFormMode==='edit'&&editId){
+    _updateExistingEmp(editId);
+  } else {
+    saveEmp();
+  }
+}
+
+function _updateExistingEmp(id){
+  try{requireAuth(false);}catch(e){return;}
+  const emps=DB.g('employees');
+  const emp=emps.find(x=>x.id===id);
+  if(!emp){toast('Employee not found');return;}
+  const fn=v('e-fn'),ln=v('e-ln');
+  if(!fn||!ln){toast('First and Last name required');return;}
+  emp.fn=fn;emp.ln=ln;
+  emp.email=v('e-em');emp.phone=v('e-ph');
+  emp.dob=v('e-dob');emp.nid=v('e-nid');
+  emp.address=v('e-addr');emp.salary=v('e-sal');
+  emp.gender=v('e-gen');emp.type=v('e-type');
+  emp.status=v('e-st');emp.join=v('e-join');
+  emp.bu=v('e-bu');emp.dept=v('e-dept');
+  emp.section=v('e-sec');emp.subsection=v('e-sub');
+  emp.title=v('e-title');emp.shift=v('e-shift');
+  if(photoB64&&photoB64!==emp.photo)emp.photo=photoB64;
+  emp.lastEditedAt=Date.now();
+  emp.lastEditedBy=currentUser?.name||currentUser?.email||'admin';
+  DB.s('employees',emps);
+  renderEmpTbl();
+  toast('✓ '+emp.fn+' '+emp.ln+' updated successfully');
+  setEmpFormMode('add');
+}
+
+// Close emp edit search dropdown when clicking outside
+document.addEventListener('click',function(ev){
+  const drop=document.getElementById('emp-edit-search-drop');
+  const wrap=document.getElementById('emp-edit-search-wrap');
+  if(drop&&wrap&&!wrap.contains(ev.target))drop.classList.remove('open');
+});
+
+// Also reset lv-bal-preview when employee picker is cleared via ls-chip ×
+(function(){
+  const orig=window.lsClear;
+  window.lsClear=function(wrap){
+    if(typeof orig==='function')orig(wrap);
+    // If it's the leave employee picker, reset preview
+    if(wrap&&wrap.closest&&wrap.closest('#lv-em-pick')){
+      const wp=document.getElementById('lv-bal-preview');
+      const dc=document.getElementById('lv-days-count');
+      if(wp)wp.style.display='none';
+      if(dc)dc.style.display='none';
+    }
+  };
+})();
+
 
 </script>
 </body>
