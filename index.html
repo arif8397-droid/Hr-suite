@@ -1142,27 +1142,8 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
 
     <!-- ADD EMPLOYEE -->
     <div id="sec-add-employee" class="section">
-      <!-- Mode bar -->
-      <div style="max-width:820px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-p" id="emp-mode-add-btn" onclick="setEmpFormMode('add')">＋ Add New Employee</button>
-        <button class="btn btn-s" id="emp-mode-edit-btn" onclick="setEmpFormMode('edit')">✏ Edit Existing Employee</button>
-        <div id="emp-edit-search-wrap" style="display:none;flex:1;min-width:220px;max-width:320px">
-          <div class="ls-wrap">
-            <span class="ls-icon">🔍</span>
-            <input class="ls-input" id="emp-edit-search" placeholder="Search employee to edit…" oninput="searchEmpForEdit()" style="padding-left:36px">
-            <div class="ls-drop" id="emp-edit-search-drop"></div>
-          </div>
-        </div>
-      </div>
       <div class="card" style="max-width:820px">
-        <div class="ch">
-          <span class="ct" id="emp-form-title">New Employee</span>
-          <div id="emp-edit-badge" style="display:none;align-items:center;gap:8px">
-            <span id="emp-edit-eid-show" style="font-family:var(--fm);font-size:12px;font-weight:700;color:var(--accent2);background:var(--accent-light);padding:4px 10px;border-radius:6px;letter-spacing:1px"></span>
-            <button class="btn btn-s btn-xs" onclick="setEmpFormMode('add')">✕ Cancel</button>
-          </div>
-        </div>
-        <input type="hidden" id="emp-edit-id">
+        <div class="ch"><span class="ct">New Employee</span></div>
         <div class="cb">
           <div style="display:flex;gap:18px;align-items:flex-start;margin-bottom:16px">
             <div>
@@ -1206,7 +1187,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
             <div class="fgrp"><label>Status</label><select id="e-st"><option>Active</option><option>Probation</option><option>On Leave</option></select></div>
           </div>
           <div class="frow">
-            <button class="btn btn-p" id="emp-save-btn" onclick="saveEmpUnified()">Save Employee</button>
+            <button class="btn btn-p" onclick="saveEmp()">Save Employee</button>
             <button class="btn btn-s" onclick="clearEmpForm()">Clear</button>
           </div>
         </div>
@@ -1289,7 +1270,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
           <div class="ch"><span class="ct">New Leave Request</span></div>
           <div class="cb">
             <div class="fg fg2">
-              <div class="fgrp"><label>Employee</label><div id="lv-em-pick" class="ls-wrap"></div><input type="hidden" id="lv-em" onchange="updateLvBalancePreview()"></div>
+              <div class="fgrp"><label>Employee</label><div id="lv-em-pick" class="ls-wrap"></div><input type="hidden" id="lv-em" onchange="renderLvBal()"></div>
               <div class="fgrp"><label>Leave Type</label>
                 <select id="lv-tp" onchange="updateLvBalancePreview()">
                 <option>Annual Leave (Earned Leave)</option>
@@ -1298,9 +1279,6 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
                 <option>Maternity Leave (112 days)</option>
                 <option>Paternity Leave</option>
                 <option>Emergency Leave</option>
-                <option>Eid-ul-Fitr Leave</option>
-                <option>Eid-ul-Adha Leave</option>
-                <option>Festival Leave</option>
                 <option>Compensatory Leave</option>
                 <option>Study/Training Leave</option>
                 <option>Unpaid Leave (LWP)</option>
@@ -1315,7 +1293,15 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
             <div class="frow"><button class="btn btn-p" onclick="saveLv()">Submit Leave Request</button></div>
           </div>
         </div>
-        <div class="card"><div class="ch"><span class="ct">Leave Balance</div><div class="cb" id="lv-bal"></div></div>
+        <div class="card">
+          <div class="ch"><span class="ct">Leave Balance</span></div>
+          <div class="cb" id="lv-bal">
+            <div class="empty" style="padding:28px 16px">
+              <div style="font-size:26px;margin-bottom:8px">👆</div>
+              <div style="font-size:12.5px;color:var(--muted);font-weight:500">Select an employee to view their leave balance</div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="card" style="margin-top:16px;max-width:900px">
         <div class="ch">
@@ -2012,13 +1998,20 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
             <div><strong>Bangladesh Labour Act 2006 (Amended 2018) Minimum Entitlements:</strong><br>
             Earned Leave: 1 day per 18 worked days (≈11/yr). Sick Leave: 14 days/yr (fully paid). Casual Leave: 10 days/yr. Maternity: 112 days paid (for 8+ months service). Festival Holidays: 11 gazetted days. </div>
           </div>
-          <div class="card"><div class="ch"><span class="ct">Annual Leave Quotas (days)</span></div><div class="cb">
+          <div class="card"><div class="ch"><span class="ct">Leave Quotas (days/year)</span></div><div class="cb">
+            <div style="margin-bottom:10px;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-light);border-radius:8px;font-size:11.5px;color:var(--accent2)">
+              🔒 <strong>Annual Leave</strong> is auto-calculated from attendance (1 day per 18 working days) — no quota needed.
+            </div>
             <div class="fg fg3">
-              <div class="fgrp"><label>Earned/Annual Leave <span style="font-weight:400;color:var(--muted)">(BD: min 11 days)</span></label><input type="number" id="q-an"></div>
-              <div class="fgrp"><label>Sick Leave <span style="font-weight:400;color:var(--muted)">(BD: min 14 days)</span></label><input type="number" id="q-sk"></div>
-              <div class="fgrp"><label>Casual Leave <span style="font-weight:400;color:var(--muted)">(BD: 10 days)</span></label><input type="number" id="q-ca"></div>
-              <div class="fgrp"><label>Maternity Leave <span style="font-weight:400;color:var(--muted)">(BD: 112 days)</span></label><input type="number" id="q-mt"></div>
-              <div class="fgrp"><label>Festival / Eid Leave <span style="font-weight:400;color:var(--muted)">(BD: 11 gazetted)</span></label><input type="number" id="q-em"></div>
+              <div class="fgrp"><label>Sick Leave <span style="font-weight:400;color:var(--muted)">(BD: min 14 days/yr)</span></label><input type="number" id="q-sk" min="0"></div>
+              <div class="fgrp"><label>Casual Leave <span style="font-weight:400;color:var(--muted)">(BD: 10 days/yr)</span></label><input type="number" id="q-ca" min="0"></div>
+              <div class="fgrp"><label>Maternity Leave <span style="font-weight:400;color:var(--muted)">(BD: 112 days)</span></label><input type="number" id="q-mt" min="0"></div>
+              <div class="fgrp"><label>Emergency Leave <span style="font-weight:400;color:var(--muted)">(days/yr)</span></label><input type="number" id="q-em" min="0"></div>
+              <div class="fgrp"><label>Paternity Leave <span style="font-weight:400;color:var(--muted)">(days/yr)</span></label><input type="number" id="q-pat" min="0"></div>
+              <div class="fgrp"><label>Compensatory Leave <span style="font-weight:400;color:var(--muted)">(days/yr)</span></label><input type="number" id="q-comp" min="0"></div>
+              <div class="fgrp"><label>Study / Training Leave <span style="font-weight:400;color:var(--muted)">(days/yr)</span></label><input type="number" id="q-study" min="0"></div>
+              <div class="fgrp"><label>Unpaid Leave (LWP) <span style="font-weight:400;color:var(--muted)">(0 = unlimited)</span></label><input type="number" id="q-lwp" min="0" placeholder="0 = no limit"></div>
+              <input type="hidden" id="q-an" value="0">
             </div>
             <div class="frow"><button class="btn btn-p" onclick="saveQuota()">Save</button></div>
           </div></div>
@@ -3007,7 +3000,7 @@ const ROLES = {
 // Defaults
 const DEF_SET={workStart:'09:00',workEnd:'18:00',lateMin:15,earlyMin:30,workDays:5,workHrs:8};
 const DEF_FM={basicPct:60,hraPct:50,taFixed:0,maFixed:0,pfPct:8,taxPct:5};
-const DEF_QT={annual:15,sick:10,casual:7,mat:90,emer:3};
+const DEF_QT={annual:15,sick:10,casual:7,mat:90,emer:3,pat:3,comp:6,study:5,lwp:0};
 const DEF_WEEKEND={days:[5,6],workType:'gross30',multiplier:2,fixedAmt:0};
 const DEF_DED={absentType:'basic30',absentFixed:0,lateType:'none',latePerMin:0,latePerOcc:0};
 const DEF_HOL_PAY={festType:'gross30x',festMul:2,festFixed:0,govtType:'gross30x',govtMul:2,govtFixed:0};
@@ -3623,7 +3616,7 @@ function openProfile(id){
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
       <button class="btn btn-pr btn-sm no-print" onclick="printEmpProfile('${id}')">🖨 Print Profile</button>
-
+      ${canEditEmployee(e)?`<button class="btn btn-p btn-sm" onclick="openEmpEdit('${id}')">✏ Edit</button>${editWindowLabel(e)?'<span style="font-size:10.5px;color:var(--info);align-self:center">⏱ '+editWindowLabel(e)+'</span>':''}`:`<button class="btn btn-s btn-sm" disabled style="opacity:.5" title="No edit access or window closed">✏ Edit Locked</button>`}
     </div>`;
   document.getElementById('prof-modal').classList.remove('hidden');
 }
@@ -3909,23 +3902,11 @@ function processAttendance(isReprocess){
 function saveLv(){
   try{requireAuth(false);}catch(e){return;}
   const empId=v('lv-em'),fr=v('lv-fr'),to=v('lv-to');
-  if(!empId||!fr||!to){toast('Fill employee, dates'); return;}
-  if(to<fr){toast('⚠ To date must be on or after From date'); return;}
+  if(!empId||!fr||!to){toast('Fill all fields');return;}
   const days=Math.ceil((new Date(to)-new Date(fr))/86400000)+1;
-  const lvType=v('lv-tp');
-  const bal=getLvBalance(empId,lvType);
-  if(!bal.isUnlimited && days>bal.available){
-    toast('⛔ Only '+bal.available+' day(s) available for '+lvType+'. Reduce days or choose Unpaid Leave (LWP).',5000);
-    updateLvBalancePreview();
-    return;
-  }
   const lvs=DB.g('leaves');
-  lvs.push({id:DB.id(),empId,type:lvType,from:fr,to,days,reason:v('lv-rs'),status:'Pending',created:Date.now()});
-  DB.s('leaves',lvs);
-  renderLvRows();renderLvBal();
-  const wp=document.getElementById('lv-bal-preview');if(wp)wp.style.display='none';
-  const dc=document.getElementById('lv-days-count');if(dc)dc.style.display='none';
-  toast('✓ Leave submitted ('+days+' day'+(days>1?'s':'')+')');
+  lvs.push({id:DB.id(),empId,type:v('lv-tp'),from:fr,to,days,reason:v('lv-rs'),status:'Pending',created:Date.now()});
+  DB.s('leaves',lvs);renderLvRows();renderLvBal();toast('✓ Submitted');
 }
 function renderLvRows(){
   const sq=(v('lv-srch')||'').toLowerCase(), fst=v('lv-fst')||'';
@@ -3946,57 +3927,116 @@ function renderLvRows(){
     </tr>`).join(''):'<tr><td colspan="8"><div class="empty">No requests</div></td></tr>';
 }
 function renderLvBal(){
-  const emps=DB.g('employees').filter(e=>e.status!=='Terminated');
-  const lvs=DB.g('leaves').filter(l=>l.status==='Approved');
+  const empId=v('lv-em');
+  const el=document.getElementById('lv-bal');
+  if(!el)return;
+  if(!empId){
+    el.innerHTML=`<div class="empty" style="padding:28px 16px"><div style="font-size:26px;margin-bottom:8px">👆</div><div style="font-size:12.5px;color:var(--muted);font-weight:500">Select an employee to view their leave balance</div></div>`;
+    return;
+  }
+  const e=DB.g('employees').find(x=>x.id===empId);
+  if(!e){el.innerHTML='<div class="empty">Employee not found</div>';return;}
+  const lvs=DB.g('leaves').filter(l=>l.status==='Approved'&&l.empId===empId);
   const att=DB.g('attendance');
-  const AL_RATE=18; // 1 AL day earned per 18 working days
+  const QT2=DB.go('quota',DEF_QT);
+  const AL_RATE=18;
   const WORKING_STATUSES=['Present','Late','Early Out','Half Day','Late & Early Out'];
-  const LEAVE_TYPES=['Annual Leave','Sick Leave','Casual Leave','Maternity/Paternity','Emergency Leave','Unpaid Leave'];
-  // Individual employee leave summary
-  document.getElementById('lv-bal').innerHTML=emps.length?`
-    <div style="margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--a2);background:var(--as);padding:6px 10px;border-radius:6px;border:1px solid var(--al);margin-bottom:10px">
-        📐 Annual Leave Accrual: 1 day earned per every <b>${AL_RATE} working days</b>
+
+  // Annual Leave — earned from attendance
+  const workingDays=att.filter(a=>a.empId===empId&&WORKING_STATUSES.includes(a.status)).length;
+  const alEarned=Math.floor(workingDays/AL_RATE);
+
+  // AL taken: match all annual leave type variants
+  const AL_TYPES=['Annual Leave (Earned Leave)','Annual Leave'];
+  const alTaken=lvs.filter(l=>AL_TYPES.includes(l.type)).reduce((s,l)=>s+(l.days||0),0);
+  const alBalance=Math.max(0,alEarned-alTaken);
+  const alPct=alEarned>0?Math.min((alTaken/alEarned)*100,100):0;
+
+  // All quota-based leaves (admin-configured)
+  const QUOTA_LEAVES=[
+    {label:'Sick Leave',types:['Sick Leave'],quota:QT2.sick||10,color:'var(--info)',bg:'var(--info-bg)'},
+    {label:'Casual Leave',types:['Casual Leave'],quota:QT2.casual||7,color:'var(--purple)',bg:'var(--purple-bg)'},
+    {label:'Maternity',types:['Maternity Leave (112 days)','Maternity/Paternity'],quota:QT2.mat||90,color:'var(--teal)',bg:'var(--teal-bg)'},
+    {label:'Emergency',types:['Emergency Leave'],quota:QT2.emer||3,color:'var(--warn)',bg:'var(--warn-bg)'},
+    {label:'Paternity',types:['Paternity Leave'],quota:QT2.pat||3,color:'var(--accent2)',bg:'var(--accent-light)'},
+    {label:'Compensatory',types:['Compensatory Leave'],quota:QT2.comp||6,color:'var(--gold)',bg:'var(--gold-bg)'},
+    {label:'Study/Training',types:['Study/Training Leave'],quota:QT2.study||5,color:'var(--info)',bg:'var(--info-bg)'},
+    {label:'Unpaid (LWP)',types:['Unpaid Leave (LWP)','Unpaid Leave'],quota:QT2.lwp||0,color:'var(--muted)',bg:'var(--bg2)',unlimited:QT2.lwp===0},
+  ];
+
+  // No free/unlimited leaves anymore — all have quotas
+  const FREE_LEAVES=[];
+
+  el.innerHTML=`
+    <div>
+      <!-- Employee header -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 14px;background:var(--accent-soft);border-radius:10px;border:1px solid var(--accent-light)">
+        <div class="av" style="background:var(--accent2);color:#fff;font-weight:700">${ini(e.fn,e.ln)}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px">${e.fn} ${e.ln}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${e.eid||''} · ${e.dept||''} · ${e.title||''}</div>
+        </div>
+        <span class="badge ${e.status==='Active'?'b-g':'b-o'}">${e.status||'Active'}</span>
       </div>
-      ${emps.map(e=>{
-        const empAtt=att.filter(a=>a.empId===e.id&&WORKING_STATUSES.includes(a.status));
-        const workingDays=empAtt.length;
-        const alEarned=Math.floor(workingDays/AL_RATE);
-        const alTaken=lvs.filter(l=>l.empId===e.id&&l.type==='Annual Leave').reduce((s,l)=>s+(l.days||0),0);
-        const alBalance=Math.max(0,alEarned-alTaken);
-        // Other leave types
-        const byType={};
-        LEAVE_TYPES.forEach(t=>{byType[t]=lvs.filter(l=>l.empId===e.id&&l.type===t).reduce((s,l)=>s+(l.days||0),0);});
-        const alPct=alEarned>0?Math.min(alTaken/alEarned*100,100):0;
-        return `<div style="margin-bottom:14px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span style="font-size:12.5px;font-weight:600">${e.fn} ${e.ln} <span class="mono" style="font-size:10px;color:var(--muted)">${e.eid||''}</span></span>
-            <span style="font-size:10.5px;color:var(--muted)">${e.dept||''}</span>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">
-            <div style="background:var(--al);border-radius:6px;padding:6px 8px;text-align:center">
-              <div style="font-family:var(--fh);font-size:15px;font-weight:700;color:var(--accent)">${workingDays}</div>
-              <div style="font-size:9.5px;color:var(--a2)">Working Days</div>
+
+      <!-- Annual Leave block (earned, not quota) -->
+      <div style="margin-bottom:14px;border-radius:10px;overflow:hidden;border:1.5px solid var(--accent-light)">
+        <div style="background:linear-gradient(90deg,var(--accent-soft),#fff);padding:10px 14px;border-bottom:1px solid var(--accent-light);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:700;font-size:12.5px;color:var(--accent)">📅 Annual Leave (Earned)</span>
+          <span style="font-size:10.5px;color:var(--muted);font-family:var(--fm)">1 day per ${AL_RATE} working days · ${workingDays} days worked</span>
+        </div>
+        <div style="padding:14px;background:#fff">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+            <div style="text-align:center;padding:10px 8px;background:var(--accent-soft);border-radius:9px;border:1px solid var(--accent-light)">
+              <div style="font-family:var(--ff);font-size:24px;font-weight:800;color:var(--accent);line-height:1">${alEarned}</div>
+              <div style="font-size:10px;color:var(--accent2);font-weight:600;margin-top:4px">Earned</div>
             </div>
-            <div style="background:var(--il);border-radius:6px;padding:6px 8px;text-align:center">
-              <div style="font-family:var(--fh);font-size:15px;font-weight:700;color:var(--info)">${alEarned}</div>
-              <div style="font-size:9.5px;color:var(--info)">AL Earned</div>
+            <div style="text-align:center;padding:10px 8px;background:var(--warn-bg);border-radius:9px;border:1px solid rgba(176,94,0,0.15)">
+              <div style="font-family:var(--ff);font-size:24px;font-weight:800;color:var(--warn);line-height:1">${alTaken}</div>
+              <div style="font-size:10px;color:var(--warn);font-weight:600;margin-top:4px">Taken</div>
             </div>
-            <div style="background:${alBalance>0?'var(--as)':'var(--wl)'};border-radius:6px;padding:6px 8px;text-align:center;border:1px solid ${alBalance>0?'var(--al)':'var(--warn)'}">
-              <div style="font-family:var(--fh);font-size:15px;font-weight:700;color:${alBalance>0?'var(--a2)':'var(--warn)'}">${alBalance}</div>
-              <div style="font-size:9.5px;color:${alBalance>0?'var(--a2)':'var(--warn)'}">AL Balance</div>
+            <div style="text-align:center;padding:10px 8px;background:${alBalance>0?'var(--success-bg)':'var(--danger-bg)'};border-radius:9px;border:1px solid ${alBalance>0?'rgba(13,122,71,0.2)':'rgba(192,57,43,0.2)'}">
+              <div style="font-family:var(--ff);font-size:24px;font-weight:800;color:${alBalance>0?'var(--success)':'var(--danger)'};line-height:1">${alBalance}</div>
+              <div style="font-size:10px;color:${alBalance>0?'var(--success)':'var(--danger)'};font-weight:600;margin-top:4px">Balance</div>
             </div>
           </div>
-          <div style="background:var(--border);border-radius:3px;height:5px;overflow:hidden;margin-bottom:8px">
-            <div style="height:100%;width:${alPct}%;background:${alPct>80?'var(--warn)':'var(--a2)'};border-radius:3px"></div>
+          <div style="background:var(--bg2);border-radius:4px;height:7px;overflow:hidden">
+            <div style="height:100%;width:${alPct}%;background:${alPct>80?'var(--danger)':alPct>60?'var(--warn)':'var(--success)'};border-radius:4px;transition:width .4s ease"></div>
           </div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
-            ${LEAVE_TYPES.filter(t=>t!=='Annual Leave').map(t=>`<span style="font-size:10.5px;padding:2px 7px;background:${byType[t]>0?'var(--gl)':'#f0f0f0'};color:${byType[t]>0?'var(--gold)':'var(--muted)'};border-radius:12px;border:1px solid ${byType[t]>0?'var(--gold)':'var(--border)'}">${JC_ABBR[t]||t}: ${byType[t]}</span>`).join('')}
-          </div>
-        </div>`;
-      }).join('')}
+          <div style="font-size:10.5px;color:var(--muted);margin-top:6px;text-align:right">${alTaken} of ${alEarned} days used (${Math.round(alPct)}%)</div>
+        </div>
+      </div>
+
+      <!-- Quota-based leaves -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:8px">Quota-Based Leaves</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${QUOTA_LEAVES.map(lv=>{
+            const taken=lvs.filter(l=>lv.types.includes(l.type)).reduce((s,l)=>s+(l.days||0),0);
+            const isUnlim=lv.unlimited===true;
+            const bal=isUnlim?'∞':Math.max(0,lv.quota-taken);
+            const pct=(!isUnlim&&lv.quota>0)?Math.min((taken/lv.quota)*100,100):0;
+            const balNum=isUnlim?Infinity:Math.max(0,lv.quota-taken);
+            return `<div style="padding:10px 12px;background:var(--bg);border-radius:9px;border:1.5px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <span style="font-size:11.5px;font-weight:700;color:${lv.color}">${lv.label}</span>
+                <span style="font-family:var(--fm);font-size:10px;color:var(--muted)">${isUnlim?taken+' used':'${taken}/'+lv.quota+' used'}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;background:var(--bg2);border-radius:3px;height:5px;overflow:hidden">
+                  ${isUnlim?'<div style="height:100%;width:100%;background:linear-gradient(90deg,var(--bg2),var(--bg2));border-radius:3px"></div>':`<div style="height:100%;width:${pct}%;background:${pct>=100?'var(--danger)':lv.color};border-radius:3px"></div>`}
+                </div>
+                <span style="font-family:var(--fm);font-size:13px;font-weight:700;color:${!isUnlim&&balNum===0?'var(--danger)':lv.color}">${isUnlim?'∞':bal} left</span>
+              </div>
+              ${isUnlim?'<div style="font-size:9.5px;color:var(--muted);margin-top:4px">No limit set by admin</div>':''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- All leaves now quota-based — section removed -->
     </div>
-  `:'<div class="empty">No active employees</div>';
+  `;
 }
 function approveLv(id){
   try{requireAuth(false);}catch(e){return;}updLv(id,'Approved');toast('✓ Approved');}
@@ -5740,7 +5780,7 @@ function loadSettings(){
   setV('f-min-hours',FM.minHours||0);
   // Update unit labels
   fmToggleBasic();fmToggleHRA();fmToggleTA();fmToggleMA();fmTogglePF();fmToggleTax();
-  setV('q-an',QT.annual||15);setV('q-sk',QT.sick||10);setV('q-ca',QT.casual||7);setV('q-mt',QT.mat||90);setV('q-em',QT.emer||3);
+  setV('q-sk',QT.sick||10);setV('q-ca',QT.casual||7);setV('q-mt',QT.mat||90);setV('q-em',QT.emer||3);setV('q-pat',QT.pat||3);setV('q-comp',QT.comp||6);setV('q-study',QT.study||5);setV('q-lwp',QT.lwp||0);
   setV('co-nm',CO.name||'');setV('co-addr',CO.address||'');setV('co-ph',CO.phone||'');setV('co-em',CO.email||'');setV('co-tg',CO.tagline||'');
   // Deduction rules
   setV('ded-abs-type',DED.absentType||'basic30');setV('ded-abs-fixed',DED.absentFixed||0);
@@ -5901,7 +5941,7 @@ function saveCustomComps(){
   DB.s('customComps',comps);toast('✓ Custom components saved');renderCustomComps();
 }
 function saveQuota(){
-  try{requireAuth(true);}catch(e){return;}QT={annual:+v('q-an')||15,sick:+v('q-sk')||10,casual:+v('q-ca')||7,mat:+v('q-mt')||90,emer:+v('q-em')||3};DB.s('quota',QT);toast('✓ Quotas saved');}
+  try{requireAuth(true);}catch(e){return;}QT={annual:0,sick:+v('q-sk')||10,casual:+v('q-ca')||7,mat:+v('q-mt')||90,emer:+v('q-em')||3,pat:+v('q-pat')||3,comp:+v('q-comp')||6,study:+v('q-study')||5,lwp:+v('q-lwp')||0};DB.s('quota',QT);toast('✓ Quotas saved');}
 function saveCo(){
   try{requireAuth(true);}catch(e){return;}CO={name:v('co-nm'),address:v('co-addr'),phone:v('co-ph'),email:v('co-em'),tagline:v('co-tg')};DB.s('company',CO);toast('✓ Company info saved');}
 
@@ -7504,31 +7544,27 @@ function expAccessCSV(){
   toast('✓ Access-compatible CSV exported ('+Object.keys(tables).length+' tables)');
 }
 
-
-
+</script>
+</body>
+<script>
 // ══════════════════════════════════════════════════════
-//  LEAVE BALANCE ENGINE
+//  LEAVE BALANCE VALIDATION — QUOTA ENGINE
 // ══════════════════════════════════════════════════════
+
 const LV_QUOTA_KEY={
   'Annual Leave (Earned Leave)':'annual',
   'Sick Leave':'sick',
   'Casual Leave':'casual',
   'Maternity Leave (112 days)':'mat',
-  'Paternity Leave':null,
+  'Paternity Leave':'pat',
   'Emergency Leave':'emer',
-  'Eid-ul-Fitr Leave':null,
-  'Eid-ul-Adha Leave':null,
-  'Festival Leave':null,
-  'Compensatory Leave':null,
-  'Study/Training Leave':null,
-  'Unpaid Leave (LWP)':null,
-  // legacy keys
+  'Compensatory Leave':'comp',
+  'Study/Training Leave':'study',
+  'Unpaid Leave (LWP)':'lwp',
+  // legacy
   'Annual Leave':'annual',
-  'Sick Leave':'sick',
-  'Casual Leave':'casual',
   'Maternity/Paternity':'mat',
-  'Emergency Leave':'emer',
-  'Unpaid Leave':null,
+  'Unpaid Leave':'lwp',
 };
 
 function _calcAlEarned(empId){
@@ -7546,19 +7582,21 @@ function getLvBalance(empId,lvType){
   const QT2=DB.go('quota',DEF_QT);
   const qKey=LV_QUOTA_KEY[lvType];
   if(qKey===null||qKey===undefined) return {available:Infinity,taken:0,quota:Infinity,isUnlimited:true,isEarned:false};
-  let quota,taken,isEarned=false;
   if(qKey==='annual'){
-    isEarned=true;
-    quota=_calcAlEarned(empId);
-    taken=_lvTaken(empId,'annual');
-  } else {
-    const QV={sick:QT2.sick||10,casual:QT2.casual||7,mat:QT2.mat||90,emer:QT2.emer||3};
-    quota=QV[qKey]||0;
-    taken=_lvTaken(empId,qKey);
+    const quota=_calcAlEarned(empId);
+    const taken=_lvTaken(empId,'annual');
+    return {available:Math.max(0,quota-taken),taken,quota,isUnlimited:false,isEarned:true};
   }
-  return {available:Math.max(0,quota-taken),taken,quota,isUnlimited:false,isEarned};
+  if(qKey==='lwp'&&(QT2.lwp===0||QT2.lwp==null)){
+    return {available:Infinity,taken:_lvTaken(empId,'lwp'),quota:0,isUnlimited:true,isEarned:false};
+  }
+  const QV={sick:QT2.sick||10,casual:QT2.casual||7,mat:QT2.mat||90,emer:QT2.emer||3,pat:QT2.pat||3,comp:QT2.comp||6,study:QT2.study||5,lwp:QT2.lwp||0};
+  const quota=QV[qKey]||0;
+  const taken=_lvTaken(empId,qKey);
+  return {available:Math.max(0,quota-taken),taken,quota,isUnlimited:false,isEarned:false};
 }
 
+// Live balance preview panel (shown in leave form)
 function updateLvBalancePreview(){
   const empId=v('lv-em'),lvType=v('lv-tp'),fr=v('lv-fr'),to=v('lv-to');
   const wrap=document.getElementById('lv-bal-preview');
@@ -7571,7 +7609,6 @@ function updateLvBalancePreview(){
   const empName=emp?emp.fn+' '+emp.ln:'';
   let reqDays=0;
   if(fr&&to&&to>=fr) reqDays=Math.ceil((new Date(to)-new Date(fr))/86400000)+1;
-  // Days count line
   if(dc){
     if(reqDays>0){dc.textContent='📅 Requesting '+reqDays+' day'+(reqDays>1?'s':'')+' ('+fr+' → '+to+')';dc.style.display='block';}
     else dc.style.display='none';
@@ -7583,7 +7620,7 @@ function updateLvBalancePreview(){
       <span style="font-size:22px">ℹ️</span>
       <div>
         <div style="font-weight:700;color:var(--info);font-size:13.5px">${lvType}</div>
-        <div style="font-size:12px;color:var(--info);margin-top:3px">No quota limit · ${reqDays>0?'Requesting <b>'+reqDays+' day'+(reqDays>1?'s':'')+'</b>':'Select dates to see request details'}</div>
+        <div style="font-size:12px;color:var(--info);margin-top:3px">No quota limit · ${reqDays>0?'Requesting <b>'+reqDays+' day'+(reqDays>1?'s':'')+'</b>':'Select dates to see details'}</div>
       </div>
     </div>`;
   } else {
@@ -7624,14 +7661,11 @@ function updateLvBalancePreview(){
       </div>
       ${over
         ?`<div style="display:flex;align-items:center;gap:8px;background:var(--danger);color:#fff;padding:9px 13px;border-radius:8px;font-size:12.5px;font-weight:600">
-            <span style="font-size:16px">⛔</span>
-            Cannot submit — requesting <b>${reqDays} days</b> but only <b>${bal.available} days</b> available. Reduce date range or use <b>Unpaid Leave (LWP)</b>.
+            <span>⛔</span> Cannot submit — requesting <b>${reqDays} days</b> but only <b>${bal.available} days</b> available.
           </div>`
         :reqDays>0
-          ?`<div style="font-size:12px;color:${mainColor};font-weight:600;display:flex;align-items:center;gap:6px">
-              <span>✅</span> Sufficient balance · ${afterDays} day${afterDays!==1?'s':''} remaining after approval
-            </div>`
-          :`<div style="font-size:11.5px;color:var(--muted)">Select From & To dates to validate your request</div>`
+          ?`<div style="font-size:12px;color:${mainColor};font-weight:600">✅ OK · ${afterDays} day${afterDays!==1?'s':''} remaining after approval</div>`
+          :`<div style="font-size:11.5px;color:var(--muted)">Select From & To dates to validate</div>`
       }
     </div>`;
   }
@@ -7640,155 +7674,27 @@ function updateLvBalancePreview(){
   wrap.style.display='block';
 }
 
-// ══════════════════════════════════════════════════════
-//  ADD EMPLOYEE — UNIFIED FORM (ADD + EDIT MODE)
-// ══════════════════════════════════════════════════════
-let _empFormMode='add';
-
-function setEmpFormMode(mode){
-  _empFormMode=mode;
-  const addBtn=document.getElementById('emp-mode-add-btn');
-  const editBtn=document.getElementById('emp-mode-edit-btn');
-  const sw=document.getElementById('emp-edit-search-wrap');
-  const title=document.getElementById('emp-form-title');
-  const badge=document.getElementById('emp-edit-badge');
-  const saveBtn=document.getElementById('emp-save-btn');
-  const editId=document.getElementById('emp-edit-id');
-  if(mode==='add'){
-    if(addBtn){addBtn.className='btn btn-p';}
-    if(editBtn){editBtn.className='btn btn-s';}
-    if(sw)sw.style.display='none';
-    if(title)title.textContent='New Employee';
-    if(badge)badge.style.display='none';
-    if(saveBtn)saveBtn.textContent='Save Employee';
-    if(editId)editId.value='';
-    clearEmpForm();
-  } else {
-    if(addBtn){addBtn.className='btn btn-s';}
-    if(editBtn){editBtn.className='btn btn-p';}
-    if(sw)sw.style.display='flex';
-    if(title)title.textContent='Edit Employee';
-    if(badge)badge.style.display='flex';
-    if(saveBtn)saveBtn.textContent='Update Employee';
-    if(editId)editId.value='';
-    clearEmpForm();
-  }
-}
-
-function searchEmpForEdit(){
-  const q=(document.getElementById('emp-edit-search')?.value||'').toLowerCase().trim();
-  const drop=document.getElementById('emp-edit-search-drop');
-  if(!drop)return;
-  if(!q){drop.classList.remove('open');return;}
-  const emps=DB.g('employees').filter(e=>
-    (e.fn+' '+e.ln+' '+(e.eid||'')+' '+(e.dept||'')+' '+(e.bu||'')).toLowerCase().includes(q)
-  ).slice(0,8);
-  if(!emps.length){
-    drop.innerHTML='<div class="ls-opt ls-empty">No employee found</div>';
-    drop.classList.add('open');return;
-  }
-  drop.innerHTML=emps.map(e=>`
-    <div class="ls-opt" onclick="loadEmpForEdit('${e.id}')">
-      <div class="ls-av" style="background:var(--accent2)">${ini(e.fn,e.ln)}</div>
-      <div><div class="ls-nm">${e.fn} ${e.ln}</div>
-      <div class="ls-meta">${e.eid||''} · ${e.dept||''} · ${e.status||''}</div></div>
-    </div>`).join('');
-  drop.classList.add('open');
-}
-
-function loadEmpForEdit(id){
-  const e=DB.g('employees').find(x=>x.id===id);
-  if(!e)return;
-  const drop=document.getElementById('emp-edit-search-drop');
-  if(drop)drop.classList.remove('open');
-  const srch=document.getElementById('emp-edit-search');
-  if(srch)srch.value=e.fn+' '+e.ln;
-  document.getElementById('emp-edit-id').value=id;
-  const badge=document.getElementById('emp-edit-badge');
-  const eidShow=document.getElementById('emp-edit-eid-show');
-  if(badge)badge.style.display='flex';
-  if(eidShow)eidShow.textContent=e.eid||'—';
-  const sv=(fid,val)=>{const el=document.getElementById(fid);if(el)el.value=val||'';};
-  sv('e-fn',e.fn);sv('e-ln',e.ln);sv('e-em',e.email);
-  sv('e-ph',e.phone);sv('e-dob',e.dob);sv('e-nid',e.nid);
-  sv('e-addr',e.address);sv('e-sal',e.salary);sv('e-join',e.join);
-  const ss=(fid,val)=>{const el=document.getElementById(fid);if(el&&val!=null)el.value=val;};
-  ss('e-gen',e.gender);ss('e-type',e.type);ss('e-st',e.status);
-  // BU cascade
-  fillBuSel('e-bu');ss('e-bu',e.bu);
-  fillDeptSel('e-dept');ss('e-dept',e.dept);
-  fillSecSel('e-sec','e-dept');ss('e-sec',e.section);
-  fillSubSel('e-sub','e-sec','e-dept');ss('e-sub',e.subsection);
-  fillDesigSel();ss('e-title',e.title);
-  fillShiftSel();ss('e-shift',e.shift);
-  const prev=document.getElementById('e-eid-preview');
-  if(prev)prev.textContent=e.eid||'—';
-  if(e.photo){
-    const pp=document.getElementById('photo-prev');
-    if(pp)pp.innerHTML=`<img src="${e.photo}" style="width:100%;height:100%;object-fit:cover">`;
-    photoB64=e.photo;
-  }
-  const saveBtn=document.getElementById('emp-save-btn');
-  if(saveBtn)saveBtn.textContent='Update Employee';
-  toast('📋 Loaded: '+e.fn+' '+e.ln+' — edit and click Update Employee');
-}
-
-function saveEmpUnified(){
-  const editId=(document.getElementById('emp-edit-id')?.value||'').trim();
-  if(_empFormMode==='edit'&&editId){
-    _updateExistingEmp(editId);
-  } else {
-    saveEmp();
-  }
-}
-
-function _updateExistingEmp(id){
+// Override saveLv with quota-blocking version
+const _origSaveLv=window.saveLv;
+window.saveLv=function(){
   try{requireAuth(false);}catch(e){return;}
-  const emps=DB.g('employees');
-  const emp=emps.find(x=>x.id===id);
-  if(!emp){toast('Employee not found');return;}
-  const fn=v('e-fn'),ln=v('e-ln');
-  if(!fn||!ln){toast('First and Last name required');return;}
-  emp.fn=fn;emp.ln=ln;
-  emp.email=v('e-em');emp.phone=v('e-ph');
-  emp.dob=v('e-dob');emp.nid=v('e-nid');
-  emp.address=v('e-addr');emp.salary=v('e-sal');
-  emp.gender=v('e-gen');emp.type=v('e-type');
-  emp.status=v('e-st');emp.join=v('e-join');
-  emp.bu=v('e-bu');emp.dept=v('e-dept');
-  emp.section=v('e-sec');emp.subsection=v('e-sub');
-  emp.title=v('e-title');emp.shift=v('e-shift');
-  if(photoB64&&photoB64!==emp.photo)emp.photo=photoB64;
-  emp.lastEditedAt=Date.now();
-  emp.lastEditedBy=currentUser?.name||currentUser?.email||'admin';
-  DB.s('employees',emps);
-  renderEmpTbl();
-  toast('✓ '+emp.fn+' '+emp.ln+' updated successfully');
-  setEmpFormMode('add');
-}
-
-// Close emp edit search dropdown when clicking outside
-document.addEventListener('click',function(ev){
-  const drop=document.getElementById('emp-edit-search-drop');
-  const wrap=document.getElementById('emp-edit-search-wrap');
-  if(drop&&wrap&&!wrap.contains(ev.target))drop.classList.remove('open');
-});
-
-// Also reset lv-bal-preview when employee picker is cleared via ls-chip ×
-(function(){
-  const orig=window.lsClear;
-  window.lsClear=function(wrap){
-    if(typeof orig==='function')orig(wrap);
-    // If it's the leave employee picker, reset preview
-    if(wrap&&wrap.closest&&wrap.closest('#lv-em-pick')){
-      const wp=document.getElementById('lv-bal-preview');
-      const dc=document.getElementById('lv-days-count');
-      if(wp)wp.style.display='none';
-      if(dc)dc.style.display='none';
-    }
-  };
-})();
-
-
+  const empId=v('lv-em'),fr=v('lv-fr'),to=v('lv-to');
+  if(!empId||!fr||!to){toast('Fill all fields');return;}
+  if(to<fr){toast('⚠ To date must be on or after From date');return;}
+  const days=Math.ceil((new Date(to)-new Date(fr))/86400000)+1;
+  const lvType=v('lv-tp');
+  const bal=getLvBalance(empId,lvType);
+  if(!bal.isUnlimited&&days>bal.available){
+    toast('⛔ Only '+bal.available+' day(s) available for '+lvType+'. Reduce days or choose Unpaid Leave (LWP).',5000);
+    updateLvBalancePreview();
+    return;
+  }
+  const lvs=DB.g('leaves');
+  lvs.push({id:DB.id(),empId,type:lvType,from:fr,to,days,reason:v('lv-rs'),status:'Pending',created:Date.now()});
+  DB.s('leaves',lvs);
+  renderLvRows();renderLvBal();
+  const wp=document.getElementById('lv-bal-preview');if(wp)wp.style.display='none';
+  const dc=document.getElementById('lv-days-count');if(dc)dc.style.display='none';
+  toast('✓ Leave submitted ('+days+' day'+(days>1?'s':'')+')');
+};
 </script>
-</body>
