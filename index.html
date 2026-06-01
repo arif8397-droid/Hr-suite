@@ -1278,7 +1278,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
                 <option>Casual Leave</option>
                 <option>Maternity Leave (112 days)</option>
                 <option>Paternity Leave</option>
-                <option>Emergency Leave</option>
+                <option>Special Leave</option>
                 <option>Compensatory Leave</option>
                 <option>Study/Training Leave</option>
                 <option>Unpaid Leave (LWP)</option>
@@ -2002,16 +2002,19 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
             <div style="margin-bottom:10px;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-light);border-radius:8px;font-size:11.5px;color:var(--accent2)">
               🔒 <strong>Annual Leave</strong> is auto-calculated from attendance (1 day per 18 working days) — no quota needed.
             </div>
+            <div style="margin-bottom:10px;padding:8px 12px;background:var(--info-bg);border:1px solid rgba(26,79,140,0.15);border-radius:8px;font-size:11.5px;color:var(--info)">
+              ∞ <strong>Special Leave</strong> and <strong>Compensatory Leave</strong> have no quota — they are unlimited.
+            </div>
             <div class="fg fg3">
               <div class="fgrp"><label>Sick Leave <span style="font-weight:400;color:var(--muted)">(BD: min 14 days/yr)</span></label><input type="number" id="q-sk" min="0"></div>
               <div class="fgrp"><label>Casual Leave <span style="font-weight:400;color:var(--muted)">(BD: 10 days/yr)</span></label><input type="number" id="q-ca" min="0"></div>
               <div class="fgrp"><label>Maternity Leave <span style="font-weight:400;color:var(--muted)">(BD: 112 days)</span></label><input type="number" id="q-mt" min="0"></div>
-              <div class="fgrp"><label>Emergency Leave <span style="font-weight:400;color:var(--muted)">(days/yr)</span></label><input type="number" id="q-em" min="0"></div>
               <div class="fgrp"><label>Paternity Leave <span style="font-weight:400;color:var(--muted)">(days/yr)</span></label><input type="number" id="q-pat" min="0"></div>
-              <div class="fgrp"><label>Compensatory Leave <span style="font-weight:400;color:var(--muted)">(days/yr)</span></label><input type="number" id="q-comp" min="0"></div>
               <div class="fgrp"><label>Study / Training Leave <span style="font-weight:400;color:var(--muted)">(days/yr)</span></label><input type="number" id="q-study" min="0"></div>
               <div class="fgrp"><label>Unpaid Leave (LWP) <span style="font-weight:400;color:var(--muted)">(0 = unlimited)</span></label><input type="number" id="q-lwp" min="0" placeholder="0 = no limit"></div>
               <input type="hidden" id="q-an" value="0">
+              <input type="hidden" id="q-em" value="0">
+              <input type="hidden" id="q-comp" value="0">
             </div>
             <div class="frow"><button class="btn btn-p" onclick="saveQuota()">Save</button></div>
           </div></div>
@@ -3957,9 +3960,9 @@ function renderLvBal(){
     {label:'Sick Leave',types:['Sick Leave'],quota:QT2.sick||10,color:'var(--info)',bg:'var(--info-bg)'},
     {label:'Casual Leave',types:['Casual Leave'],quota:QT2.casual||7,color:'var(--purple)',bg:'var(--purple-bg)'},
     {label:'Maternity',types:['Maternity Leave (112 days)','Maternity/Paternity'],quota:QT2.mat||90,color:'var(--teal)',bg:'var(--teal-bg)'},
-    {label:'Emergency',types:['Emergency Leave'],quota:QT2.emer||3,color:'var(--warn)',bg:'var(--warn-bg)'},
+    {label:'Special Leave',types:['Special Leave'],quota:0,color:'var(--warn)',bg:'var(--warn-bg)',unlimited:true},
     {label:'Paternity',types:['Paternity Leave'],quota:QT2.pat||3,color:'var(--accent2)',bg:'var(--accent-light)'},
-    {label:'Compensatory',types:['Compensatory Leave'],quota:QT2.comp||6,color:'var(--gold)',bg:'var(--gold-bg)'},
+    {label:'Compensatory',types:['Compensatory Leave'],quota:0,color:'var(--gold)',bg:'var(--gold-bg)',unlimited:true},
     {label:'Study/Training',types:['Study/Training Leave'],quota:QT2.study||5,color:'var(--info)',bg:'var(--info-bg)'},
     {label:'Unpaid (LWP)',types:['Unpaid Leave (LWP)','Unpaid Leave'],quota:QT2.lwp||0,color:'var(--muted)',bg:'var(--bg2)',unlimited:QT2.lwp===0},
   ];
@@ -4020,7 +4023,7 @@ function renderLvBal(){
             return `<div style="padding:10px 12px;background:var(--bg);border-radius:9px;border:1.5px solid var(--border)">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
                 <span style="font-size:11.5px;font-weight:700;color:${lv.color}">${lv.label}</span>
-                <span style="font-family:var(--fm);font-size:10px;color:var(--muted)">${isUnlim?taken+' used':'${taken}/'+lv.quota+' used'}</span>
+                <span style="font-family:var(--fm);font-size:10px;color:var(--muted)">${isUnlim?taken+' used':taken+'/'+lv.quota+' used'}</span>
               </div>
               <div style="display:flex;align-items:center;gap:8px">
                 <div style="flex:1;background:var(--bg2);border-radius:3px;height:5px;overflow:hidden">
@@ -5093,17 +5096,29 @@ function detectImportType(hdrs){
 function showImportPreview(){
   document.getElementById('import-preview-wrap').style.display='block';
   document.getElementById('import-count').textContent=`${importData.rows.length} rows · Detected: ${importData.type}`;
-  // Mapping grid
-  const empFields=['Employee ID','First Name','Last Name','Gender','DOB','Email','Phone','NID','Address','Business Unit','Department','Section','Sub-section','Title','Type','Join Date','Salary','Status'];
+  // Field options per type
+  const fieldsByType={
+    employees:['Employee ID','First Name','Last Name','Gender','DOB','Email','Phone','NID','Address','Business Unit','Department','Section','Sub-section','Title','Type','Join Date','Salary','Status'],
+    attendance:['Employee ID','Date (YYYY-MM-DD)','Status','Check In (HH:MM)','Check Out (HH:MM)','Note'],
+    payroll:['Employee ID','Month (YYYY-MM)','Gross Salary','Basic','HRA','Transport','Medical','Special','Bonus','PF','Tax','Absent Deduction','Payment Method','Status']
+  };
+  const fields=fieldsByType[importData.type]||fieldsByType.employees;
   const mapGrid=document.getElementById('import-map-grid');
-  mapGrid.innerHTML=importData.headers.map((h,i)=>`
-    <div class="im-row">
+  mapGrid.innerHTML=importData.headers.map((h,i)=>{
+    // Auto-match: exact (case-insensitive) or partial
+    const hL=h.toLowerCase().replace(/[^a-z0-9]/g,'');
+    const matched=fields.find(f=>{
+      const fL=f.toLowerCase().replace(/[^a-z0-9]/g,'');
+      return fL===hL||fL.includes(hL)||hL.includes(fL);
+    })||'';
+    return `<div class="im-row">
       <div class="im-col">${h}</div>
       <select style="flex:1;font-size:12px;padding:4px 7px" id="map-${i}">
         <option value="">— Skip —</option>
-        ${empFields.map(f=>`<option value="${f}"${f.toLowerCase()===h.toLowerCase()||f.toLowerCase().includes(h.toLowerCase())?'selected':''}>${f}</option>`).join('')}
+        ${fields.map(f=>`<option value="${f}"${f===matched?'selected':''}>${f}</option>`).join('')}
       </select>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   // Preview table
   const prevHdrs='<thead><tr>'+importData.headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead>';
   const prevRows='<tbody>'+importData.rows.slice(0,5).map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')+'</tbody>';
@@ -5115,39 +5130,77 @@ function doImport(){
   const mapping={};
   importData.headers.forEach((h,i)=>{const sel=document.getElementById('map-'+i);if(sel&&sel.value)mapping[sel.value]=i;});
   const type=importData.type;let imported=0,skipped=0;
+
+  // Helper: get value by mapped field name, returns '' if not mapped or skipped
+  function get(row,field){
+    const idx=mapping[field];
+    return (idx!==undefined&&idx!==null)?((row[idx]||'').toString().trim()):'';
+  }
+
   if(type==='employees'){
     const emps=DB.g('employees');
     importData.rows.forEach(row=>{
-      const fn=row[mapping['First Name']||0]?.trim()||'';
-      const ln=row[mapping['Last Name']||1]?.trim()||'';
+      const fn=get(row,'First Name');
+      const ln=get(row,'Last Name');
       if(!fn&&!ln){skipped++;return;}
-      const eid=row[mapping['Employee ID']]?.trim()||'EMP'+String(emps.length+1).padStart(3,'0');
+      let eid=get(row,'Employee ID');
+      if(!eid)eid='EMP'+String(emps.length+imported+1).padStart(3,'0');
       // Check duplicate
       if(emps.find(e=>e.eid===eid)){skipped++;return;}
-      emps.push({id:DB.id(),eid,fn,ln,gender:row[mapping['Gender']]?.trim()||'',dob:row[mapping['DOB']]?.trim()||'',
-        email:row[mapping['Email']]?.trim()||'',phone:row[mapping['Phone']]?.trim()||'',
-        nid:row[mapping['NID']]?.trim()||'',address:row[mapping['Address']]?.trim()||'',
-        bu:row[mapping['Business Unit']]?.trim()||'',dept:row[mapping['Department']]?.trim()||'',
-        section:row[mapping['Section']]?.trim()||'',subsection:row[mapping['Sub-section']]?.trim()||'',
-        title:row[mapping['Title']]?.trim()||'',type:row[mapping['Type']]?.trim()||'Full-time',
-        join:row[mapping['Join Date']]?.trim()||'',salary:row[mapping['Salary']]?.trim()||'',
-        status:row[mapping['Status']]?.trim()||'Active',photo:'',joinedAt:Date.now()});
+      emps.push({id:DB.id(),eid,fn,ln,
+        gender:get(row,'Gender'),dob:get(row,'DOB'),
+        email:get(row,'Email'),phone:get(row,'Phone'),
+        nid:get(row,'NID'),address:get(row,'Address'),
+        bu:get(row,'Business Unit'),dept:get(row,'Department'),
+        section:get(row,'Section'),subsection:get(row,'Sub-section'),
+        title:get(row,'Title'),type:get(row,'Type')||'Full-time',
+        join:get(row,'Join Date'),salary:get(row,'Salary'),
+        status:get(row,'Status')||'Active',photo:'',joinedAt:Date.now()});
       imported++;
     });
     DB.s('employees',emps);
   }else if(type==='attendance'){
     const emps=DB.g('employees'),att=DB.g('attendance');
     importData.rows.forEach(row=>{
-      const eid=row[mapping['Employee ID']]?.trim()||row[0]?.trim();
+      // Try mapped field first, then fallback to column 0
+      const eid=(get(row,'Employee ID')||row[0]||'').toString().trim();
       const emp=emps.find(e=>e.eid===eid||e.id===eid);if(!emp){skipped++;return;}
-      const date=row[mapping['Date (YYYY-MM-DD)']]?.trim()||row[1]?.trim();
+      const date=(get(row,'Date (YYYY-MM-DD)')||row[1]||'').toString().trim();
       if(!date){skipped++;return;}
-      att.push({id:DB.id(),empId:emp.id,date,status:row[mapping['Status']]?.trim()||'Present',
-        checkIn:row[mapping['Check In (HH:MM)']]?.trim()||'',checkOut:row[mapping['Check Out (HH:MM)']]?.trim()||'',
-        note:row[mapping['Note']]?.trim()||'',lateMin:0,earlyMin:0});
+      att.push({id:DB.id(),empId:emp.id,date,
+        status:get(row,'Status')||'Present',
+        checkIn:get(row,'Check In (HH:MM)'),
+        checkOut:get(row,'Check Out (HH:MM)'),
+        note:get(row,'Note'),lateMin:0,earlyMin:0});
       imported++;
     });
     DB.s('attendance',att);
+  }else if(type==='payroll'){
+    const emps=DB.g('employees'),pr=DB.g('payroll');
+    importData.rows.forEach(row=>{
+      const eid=(get(row,'Employee ID')||row[0]||'').toString().trim();
+      const emp=emps.find(e=>e.eid===eid||e.id===eid);if(!emp){skipped++;return;}
+      const month=(get(row,'Month (YYYY-MM)')||row[1]||'').toString().trim();
+      if(!month){skipped++;return;}
+      const gross=parseFloat(get(row,'Gross Salary')||row[2])||0;
+      const basic=parseFloat(get(row,'Basic')||row[3])||0;
+      const hra=parseFloat(get(row,'HRA')||row[4])||0;
+      const ta=parseFloat(get(row,'Transport')||row[5])||0;
+      const ma=parseFloat(get(row,'Medical')||row[6])||0;
+      const sa=parseFloat(get(row,'Special')||row[7])||0;
+      const bonus=parseFloat(get(row,'Bonus')||row[8])||0;
+      const pf=parseFloat(get(row,'PF')||row[9])||0;
+      const tax=parseFloat(get(row,'Tax')||row[10])||0;
+      const absent=parseFloat(get(row,'Absent Deduction')||row[11])||0;
+      const method=(get(row,'Payment Method')||row[12])||'Bank Transfer';
+      const status=(get(row,'Status')||row[13])||'Pending';
+      const ded=pf+tax+absent;
+      const earn=gross+sa+bonus;
+      const net=Math.max(0,earn-ded);
+      pr.push({id:DB.id(),empId:emp.id,month,gross,basic,hra,ta,ma,sa,bonus,pf,tax:tax,absent,earn,ded,net,method,status,created:Date.now()});
+      imported++;
+    });
+    DB.s('payroll',pr);
   }
   cancelImport();
   toast(`✓ Imported ${imported} records${skipped?` · ${skipped} skipped`:''}`,4000);
@@ -7557,8 +7610,8 @@ const LV_QUOTA_KEY={
   'Casual Leave':'casual',
   'Maternity Leave (112 days)':'mat',
   'Paternity Leave':'pat',
-  'Emergency Leave':'emer',
-  'Compensatory Leave':'comp',
+  'Special Leave':null,        // no quota — unlimited
+  'Compensatory Leave':null,   // no quota — unlimited
   'Study/Training Leave':'study',
   'Unpaid Leave (LWP)':'lwp',
   // legacy
@@ -7590,7 +7643,7 @@ function getLvBalance(empId,lvType){
   if(qKey==='lwp'&&(QT2.lwp===0||QT2.lwp==null)){
     return {available:Infinity,taken:_lvTaken(empId,'lwp'),quota:0,isUnlimited:true,isEarned:false};
   }
-  const QV={sick:QT2.sick||10,casual:QT2.casual||7,mat:QT2.mat||90,emer:QT2.emer||3,pat:QT2.pat||3,comp:QT2.comp||6,study:QT2.study||5,lwp:QT2.lwp||0};
+  const QV={sick:QT2.sick||10,casual:QT2.casual||7,mat:QT2.mat||90,pat:QT2.pat||3,study:QT2.study||5,lwp:QT2.lwp||0};
   const quota=QV[qKey]||0;
   const taken=_lvTaken(empId,qKey);
   return {available:Math.max(0,quota-taken),taken,quota,isUnlimited:false,isEarned:false};
