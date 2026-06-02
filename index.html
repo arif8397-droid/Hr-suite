@@ -3139,7 +3139,7 @@ async function doLogin() {
 
     if (!profile) {
       // Profile row missing (trigger may have not fired) — create a minimal one
-      currentUser = { id: sbUser.id, email: sbUser.email, name: sbUser.email, app_role: 'hr_viewer', access: [] };
+      currentUser = { id: sbUser.id, email: sbUser.email, name: sbUser.email, app_role: 'hr_admin', access: [] };
     } else {
       currentUser = { id: profile.id, email: sbUser.email, name: profile.full_name || sbUser.email, app_role: profile.app_role || 'hr_staff', access: profile.access || [], bu_access: profile.bu_access || [] };
     }
