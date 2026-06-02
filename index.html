@@ -5916,7 +5916,7 @@ function printReport(type){
     ${trs.map(t=>{const e=emps.find(x=>x.id===t.empId)||{};return`<tr><td><strong>${e.eid||'—'}</strong></td><td>${e.fn||'?'} ${e.ln||''}</td><td>${t.date}</td><td>${t.type}</td><td>${t.fromBU||'—'}</td><td>${t.fromDept||'—'}${t.fromSec?' › '+t.fromSec:''}</td><td><strong>${t.toBU||'—'}</strong></td><td><strong>${t.toDept||'—'}${t.toSec?' › '+t.toSec:''}</strong></td><td>${t.toTitle||t.fromTitle||'—'}</td><td>${t.reason||'—'}</td></tr>`;}).join('')}
     </tbody></table>`;
   }
-  if(title&&tableHTML) openPrintWindow(title,tableHTML,co);
+  if(title && tableHTML) openPrintWindow(title, tableHTML, co);
 }
 
 function openPrintWindow(title,tableHTML,co){
