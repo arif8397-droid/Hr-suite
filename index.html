@@ -1393,7 +1393,8 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
                 <input class="pb-amt" type="number" id="py-sa" placeholder="0 (admin sets)" oninput="calcNet()">
               </div>
               <div class="pb-row"><div class="pb-name">Tiffin / Food Allowance</div><input class="pb-amt" type="number" id="py-tiff" placeholder="0" oninput="calcNet()"></div>
-              <div class="pb-row"><div class="pb-name">Night Allowance</div><input class="pb-amt" type="number" id="py-night" placeholder="0" oninput="calcNet()"></div>
+              <div class="pb-row"><div class="pb-name">Night Allowance <span class="pb-formula" id="pf-night" style="cursor:pointer;color:var(--a2)" onclick="autoCalcNightPay()" title="Auto-calculate from attendance">⟳ auto</span></div><input class="pb-amt" type="number" id="py-night" placeholder="0" oninput="calcNet()"></div>
+              <div class="pb-row"><div class="pb-name">Overtime Pay <span class="pb-formula" id="pf-ot" style="cursor:pointer;color:var(--a2)" onclick="autoCalcOTPay()" title="Auto-calculate from attendance checkout times">⟳ auto</span></div><input class="pb-amt" type="number" id="py-ot" placeholder="0" oninput="calcNet()"></div>
               <div class="pb-row"><div class="pb-name">Bonus / Incentive</div><input class="pb-amt" type="number" id="py-bn" placeholder="0" oninput="calcNet()"></div>
               <div class="pb-row"><div class="pb-name">Weekend Work Pay <span class="pb-formula" id="pf-wknd" style="cursor:pointer;color:var(--a2)" onclick="autoCalcWeekendPay()" title="Click to auto-calculate">⟳ auto</span></div><input class="pb-amt" type="number" id="py-wknd" placeholder="0" oninput="calcNet()"></div>
               <div class="pb-row"><div class="pb-name">Holiday Work Pay <span class="pb-formula" id="pf-hol" style="cursor:pointer;color:var(--a2)" onclick="autoCalcHolidayPay()" title="Click to auto-calculate">⟳ auto</span></div><input class="pb-amt" type="number" id="py-hol" placeholder="0" oninput="calcNet()"></div>
@@ -1911,6 +1912,9 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
           <div class="tab" onclick="swTab(1)">Payroll Formula</div>
           <div class="tab" onclick="swTab(2)">Leave Quotas</div>
           <div class="tab" onclick="swTab(3)">Deductions</div>
+          <div class="tab" onclick="swTab(13)">⏱ Overtime</div>
+          <div class="tab" onclick="swTab(14)">🍱 Tiffin Rules</div>
+          <div class="tab" onclick="swTab(15)">🌙 Night Pay</div>
           <div class="tab" onclick="swTab(4)">Business Units</div>
           <div class="tab" onclick="swTab(5)">Departments</div>
           <div class="tab" onclick="swTab(6)">Designations</div>
@@ -2106,24 +2110,43 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
           </div></div>
         </div>
 
-        <!-- tp-3: Deduction Rules (NEW) -->
+        <!-- tp-3: Deduction Rules -->
         <div class="tab-panel" id="tp-3">
-          <div class="card"><div class="ch"><span class="ct">Absent Deduction Logic</span></div><div class="cb">
-            <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Define how absent days are deducted from salary automatically. <b>Standard formula:</b> Basic ÷ 30 × Absent Days.</p>
+          <div class="card"><div class="ch"><span class="ct">Absent Deduction Logic</span><span style="font-size:11px;color:var(--muted)">Admin sets how absent days reduce salary</span></div><div class="cb">
+            <div class="notice notice-i" style="margin-bottom:12px"><span>ℹ️</span><div>Choose how absent deduction is calculated. All options can use a <b>divisor</b> you control — 30 fixed, calendar days, or actual working days.</div></div>
             <div class="fg fg2">
               <div class="fgrp">
-                <label>Deduction Method</label>
+                <label>Deduction Basis</label>
                 <select id="ded-abs-type" onchange="toggleAbsDed()">
-                  <option value="basic30">Basic ÷ 30 × Absent Days (Standard)</option>
-                  <option value="daily">Daily Rate (Gross ÷ Work Days)</option>
-                  <option value="fixed">Fixed Amount per Day</option>
+                  <option value="gross30">Gross ÷ Divisor × Absent Days</option>
+                  <option value="basic30">Basic ÷ Divisor × Absent Days (Standard BD)</option>
+                  <option value="grossPayable">Gross Payable ÷ Divisor × Absent Days</option>
+                  <option value="daily">Gross ÷ Actual Working Days × Absent Days</option>
+                  <option value="fixed">Fixed Amount per Absent Day (BDT)</option>
                   <option value="none">No Deduction</option>
                 </select>
               </div>
-              <div class="fgrp" id="ded-abs-fixed-grp">
+              <div class="fgrp">
+                <label>Divisor for Deduction</label>
+                <select id="ded-abs-divisor" onchange="toggleAbsDed()">
+                  <option value="30">Fixed 30</option>
+                  <option value="calendar">Calendar Month Days (28–31)</option>
+                  <option value="26">Fixed 26 (working days basis)</option>
+                  <option value="custom">Custom Number</option>
+                </select>
+              </div>
+              <div class="fgrp" id="ded-abs-custom-div-grp" style="display:none">
+                <label>Custom Divisor Value</label>
+                <input type="number" id="ded-abs-custom-div" placeholder="e.g. 25" min="1" max="31">
+              </div>
+              <div class="fgrp" id="ded-abs-fixed-grp" style="display:none">
                 <label>Fixed Amount per Absent Day (BDT)</label>
                 <input type="number" id="ded-abs-fixed" placeholder="0">
               </div>
+            </div>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;margin-top:6px;margin-bottom:12px">
+              <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Formula Preview</div>
+              <div id="ded-abs-preview" style="font-size:12.5px;font-family:var(--fm);color:var(--accent2)">—</div>
             </div>
           </div></div>
           <div class="card" style="margin-top:14px"><div class="ch"><span class="ct">Late Deduction Logic</span></div><div class="cb">
@@ -2146,7 +2169,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
                 <input type="number" id="ded-late-occ" placeholder="0">
               </div>
             </div>
-            <div class="frow"><button class="btn btn-p" onclick="saveDeductionRules()">Save Deduction Rules</button></div>
+            <div class="frow"><button class="btn btn-p" onclick="saveDeductionRules()">💾 Save Deduction Rules</button></div>
           </div></div>
         </div>
 
@@ -2503,6 +2526,243 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
             </div>
           </div>
 
+        </div>
+
+      </div>
+
+        <!-- ══════════════════════════════════════
+             tp-13: OVERTIME RULES
+             ══════════════════════════════════════ -->
+        <div class="tab-panel" id="tp-13">
+          <div class="card"><div class="ch"><span class="ct">⏱ Overtime (OT) Formula</span><span style="font-size:11px;color:var(--muted)">Auto-calculated from attendance checkout time vs shift end</span></div><div class="cb">
+
+            <div class="notice notice-i" style="margin-bottom:14px"><span>💡</span><div><b>Standard BD formula:</b> OT Pay = (Basic ÷ 208) × 2 × OT Hours. 208 = 26 days × 8 hrs/day. You can override the divisor and multiplier below.</div></div>
+
+            <div class="fsec">OT Trigger — When does OT start?</div>
+            <div class="fg fg3" style="margin-bottom:12px">
+              <div class="fgrp">
+                <label>OT Trigger After Shift End</label>
+                <select id="ot-trigger-type" onchange="toggleOTTrigger()">
+                  <option value="immediate">Immediately after shift ends</option>
+                  <option value="grace">After a grace period (minutes)</option>
+                </select>
+              </div>
+              <div class="fgrp" id="ot-grace-grp" style="display:none">
+                <label>Grace Period (minutes before OT starts)</label>
+                <input type="number" id="ot-grace-min" placeholder="e.g. 30" min="0" max="120">
+              </div>
+              <div class="fgrp">
+                <label>OT Threshold — Minimum OT Hours to Pay</label>
+                <input type="number" id="ot-min-hours" placeholder="0 = any OT counts" min="0" step="0.5">
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">e.g. 0.5 = only pay OT if ≥30 min overtime worked</div>
+              </div>
+            </div>
+
+            <div class="fsec">OT Pay Formula</div>
+            <div class="fg fg3" style="margin-bottom:12px">
+              <div class="fgrp">
+                <label>OT Calculation Method</label>
+                <select id="ot-method" onchange="toggleOTMethod()">
+                  <option value="basic208x2">Basic ÷ 208 × 2 × OT Hrs (Standard BD)</option>
+                  <option value="basic_custom">Basic ÷ Custom Divisor × Multiplier × OT Hrs</option>
+                  <option value="gross208x2">Gross ÷ 208 × 2 × OT Hrs</option>
+                  <option value="gross_custom">Gross ÷ Custom Divisor × Multiplier × OT Hrs</option>
+                  <option value="fixed_per_hour">Fixed Amount per OT Hour (BDT)</option>
+                  <option value="none">No OT Pay</option>
+                </select>
+              </div>
+              <div class="fgrp" id="ot-divisor-grp">
+                <label>Divisor <span style="font-weight:400;color:var(--muted)">(208 = 26days×8hrs)</span></label>
+                <input type="number" id="ot-divisor" placeholder="208" min="1" value="208">
+              </div>
+              <div class="fgrp" id="ot-multiplier-grp">
+                <label>Multiplier (× basic/gross per hour)</label>
+                <input type="number" id="ot-multiplier" placeholder="2" min="1" step="0.5" value="2">
+              </div>
+              <div class="fgrp" id="ot-fixed-grp" style="display:none">
+                <label>Fixed Amount per OT Hour (BDT)</label>
+                <input type="number" id="ot-fixed-per-hr" placeholder="0">
+              </div>
+            </div>
+
+            <div class="fsec">Tiered OT Rules (Optional)</div>
+            <div class="notice notice-w" style="margin-bottom:10px"><span>⚙️</span><div>You can set different rates for different OT hour brackets. If no tiers are set, the single formula above applies to all OT hours.</div></div>
+            <div id="ot-tiers-list" style="margin-bottom:8px"></div>
+            <button class="btn btn-s btn-sm" onclick="addOTTier()" style="margin-bottom:14px">＋ Add OT Tier</button>
+
+            <div class="fsec">OT Eligibility</div>
+            <div class="fg fg2" style="margin-bottom:12px">
+              <div class="fgrp">
+                <label>Apply OT To</label>
+                <select id="ot-apply-to" onchange="toggleOTApply()">
+                  <option value="all">All Employees</option>
+                  <option value="shift">Specific Shifts Only</option>
+                  <option value="category">Specific Employee Categories Only</option>
+                  <option value="dept">Specific Departments Only</option>
+                </select>
+              </div>
+            </div>
+            <div id="ot-filter-section" style="display:none;margin-bottom:12px">
+              <div class="fsec" id="ot-filter-label">Select Eligible Shifts</div>
+              <div id="ot-filter-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+            </div>
+
+            <div class="frow"><button class="btn btn-p" onclick="saveOTRules()">💾 Save Overtime Rules</button></div>
+
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:14px">
+              <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Live Formula Preview</div>
+              <div id="ot-formula-preview" style="font-family:var(--fm);font-size:12.5px;color:var(--accent2)">Save settings to see preview</div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+             tp-14: TIFFIN ALLOWANCE RULES
+             ══════════════════════════════════════ -->
+        <div class="tab-panel" id="tp-14">
+          <div class="card"><div class="ch"><span class="ct">🍱 Tiffin / Food Allowance Rules</span><span style="font-size:11px;color:var(--muted)">Control who gets tiffin and how it is calculated</span></div><div class="cb">
+
+            <div class="fsec">Global Tiffin Formula</div>
+            <div class="fg fg3" style="margin-bottom:12px">
+              <div class="fgrp">
+                <label>Tiffin Calculation Method</label>
+                <select id="tiff-method" onchange="toggleTiffMethod()">
+                  <option value="fixed_monthly">Fixed Monthly Amount (BDT)</option>
+                  <option value="per_day">Per Working Day (BDT/day)</option>
+                  <option value="per_hour_ot">Only When OT ≥ Threshold (BDT per OT occurrence)</option>
+                  <option value="shift_wise">Shift-wise (set per shift below)</option>
+                  <option value="category_wise">Employee Category-wise (set per category below)</option>
+                  <option value="none">No Tiffin Allowance</option>
+                </select>
+              </div>
+              <div class="fgrp" id="tiff-fixed-grp">
+                <label>Amount (BDT)</label>
+                <input type="number" id="tiff-global-amt" placeholder="0">
+              </div>
+              <div class="fgrp" id="tiff-ot-hours-grp" style="display:none">
+                <label>Minimum OT Hours to Trigger Tiffin</label>
+                <input type="number" id="tiff-ot-threshold" placeholder="2" step="0.5" min="0">
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">e.g. 2 = tiffin paid when employee works 2+ hours past shift end</div>
+              </div>
+              <div class="fgrp" id="tiff-ot-amt-grp" style="display:none">
+                <label>Tiffin Amount per OT Occurrence (BDT)</label>
+                <input type="number" id="tiff-ot-amt" placeholder="0">
+              </div>
+            </div>
+
+            <div id="tiff-shift-section" style="display:none">
+              <div class="fsec">Per-Shift Tiffin Amounts</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Set the tiffin amount for each shift. Employees assigned to that shift receive the corresponding amount.</div>
+              <div id="tiff-shift-rows" style="margin-bottom:8px"></div>
+              <div style="font-size:11.5px;color:var(--info);background:var(--info-bg);padding:8px 12px;border-radius:6px;margin-bottom:12px">💡 Define shifts first under Settings → Shifts</div>
+            </div>
+
+            <div id="tiff-category-section" style="display:none">
+              <div class="fsec">Per-Category Tiffin Amounts</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Set the tiffin amount for each employee type/category.</div>
+              <div id="tiff-category-rows" style="margin-bottom:12px"></div>
+            </div>
+
+            <div class="fsec">Tiffin Eligibility</div>
+            <div class="fg fg2" style="margin-bottom:12px">
+              <div class="fgrp">
+                <label>Who Receives Tiffin</label>
+                <select id="tiff-eligibility" onchange="toggleTiffEligibility()">
+                  <option value="all">All Employees</option>
+                  <option value="specific_shift">Employees on Specific Shifts</option>
+                  <option value="specific_category">Employees of Specific Category</option>
+                  <option value="specific_dept">Employees in Specific Departments</option>
+                </select>
+              </div>
+            </div>
+            <div id="tiff-eligibility-filter" style="display:none;margin-bottom:14px">
+              <div class="fsec" id="tiff-elig-label">Select Eligible Shifts</div>
+              <div id="tiff-elig-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+            </div>
+
+            <div class="frow"><button class="btn btn-p" onclick="saveTiffRules()">💾 Save Tiffin Rules</button></div>
+          </div></div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+             tp-15: NIGHT PAY RULES
+             ══════════════════════════════════════ -->
+        <div class="tab-panel" id="tp-15">
+          <div class="card"><div class="ch"><span class="ct">🌙 Night Shift / Night Pay Rules</span><span style="font-size:11px;color:var(--muted)">Define how night work is compensated</span></div><div class="cb">
+
+            <div class="notice notice-i" style="margin-bottom:14px"><span>🌙</span><div>Night pay is triggered when an employee's shift (or checkout time) falls within the defined night window. You can set different rates for different shifts or hours worked.</div></div>
+
+            <div class="fsec">Night Window Definition</div>
+            <div class="fg fg3" style="margin-bottom:12px">
+              <div class="fgrp">
+                <label>Night Start Time</label>
+                <input type="time" id="night-start" value="22:00">
+              </div>
+              <div class="fgrp">
+                <label>Night End Time (next day)</label>
+                <input type="time" id="night-end" value="06:00">
+              </div>
+              <div class="fgrp">
+                <label>Minimum Night Hours to Qualify</label>
+                <input type="number" id="night-min-hours" placeholder="2" step="0.5" min="0">
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Employee must work at least this many hours in the night window</div>
+              </div>
+            </div>
+
+            <div class="fsec">Night Pay Formula</div>
+            <div class="fg fg3" style="margin-bottom:12px">
+              <div class="fgrp">
+                <label>Calculation Method</label>
+                <select id="night-method" onchange="toggleNightMethod()">
+                  <option value="fixed_monthly">Fixed Monthly Allowance (BDT)</option>
+                  <option value="per_night">Per Night Shift Worked (BDT/shift)</option>
+                  <option value="pct_basic">% of Basic Salary</option>
+                  <option value="pct_gross">% of Gross Salary</option>
+                  <option value="per_hour">Per Night Hour Worked (BDT/hr)</option>
+                  <option value="shift_wise">Shift-wise (set per shift below)</option>
+                  <option value="none">No Night Pay</option>
+                </select>
+              </div>
+              <div class="fgrp" id="night-amt-grp">
+                <label id="night-amt-label">Amount (BDT)</label>
+                <input type="number" id="night-global-amt" placeholder="0">
+              </div>
+              <div class="fgrp" id="night-pct-grp" style="display:none">
+                <label>Percentage (%)</label>
+                <input type="number" id="night-pct-amt" placeholder="0" step="0.5">
+              </div>
+            </div>
+
+            <div id="night-shift-section" style="display:none">
+              <div class="fsec">Per-Shift Night Pay Amounts</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Set a different night allowance for each shift. Only shifts that fall within the night window will receive the amount.</div>
+              <div id="night-shift-rows" style="margin-bottom:12px"></div>
+            </div>
+
+            <div class="fsec">Night Pay Eligibility</div>
+            <div class="fg fg2" style="margin-bottom:12px">
+              <div class="fgrp">
+                <label>Apply Night Pay To</label>
+                <select id="night-apply-to" onchange="toggleNightApply()">
+                  <option value="all">All Employees Working Night Hours</option>
+                  <option value="shift">Only Employees on Specific Night Shifts</option>
+                  <option value="category">Only Specific Employee Categories</option>
+                  <option value="dept">Only Specific Departments</option>
+                </select>
+              </div>
+            </div>
+            <div id="night-filter-section" style="display:none;margin-bottom:12px">
+              <div class="fsec" id="night-filter-label">Select Eligible Shifts</div>
+              <div id="night-filter-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+            </div>
+
+            <div class="frow"><button class="btn btn-p" onclick="saveNightRules()">💾 Save Night Pay Rules</button></div>
+
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:14px">
+              <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Night Pay Preview</div>
+              <div id="night-formula-preview" style="font-family:var(--fm);font-size:12.5px;color:var(--accent2)">Save settings to see preview</div>
+            </div>
+          </div></div>
         </div>
 
       </div>
@@ -4212,10 +4472,19 @@ function applyFormula(){
 
   // Auto-calc absent deduction
   const absent=att.filter(a=>a.status==='Absent').length;
-  const abd=calcAbsentDeductionFromPayable(grossPayable,daysDiv,absent);
+  const DED=DB.go('deductionRules',DEF_DED);
+  const absDivisor=_getAbsDivisor(payMonth)||daysDiv;
+  const absDedType=DED.absentType||'gross30';
+  let abd=0;
+  if(absDedType==='none')abd=0;
+  else if(absDedType==='fixed')abd=(DED.absentFixed||0)*absent;
+  else if(absDedType==='basic30')abd=Math.round(basic/absDivisor*absent);
+  else if(absDedType==='grossPayable')abd=Math.round(grossPayable/absDivisor*absent);
+  else if(absDedType==='daily'){const wDays=fm.workDays||22;abd=Math.round(fixedGross/wDays*absent);}
+  else abd=Math.round(fixedGross/absDivisor*absent); // gross30
   setV('py-abd',abd);
   const abdEl=document.getElementById('pf-abd');
-  if(abdEl)abdEl.textContent=`GrossPayable÷${daysDiv}×${absent}d`;
+  if(abdEl)abdEl.textContent=`${absDedType}÷${absDivisor}×${absent}d`;
   calcNet();
 }
 function autoCalcAbsent(){
@@ -4224,11 +4493,26 @@ function autoCalcAbsent(){
   const daysDiv=_fmGetDivisor(mo);
   const att=DB.g('attendance').filter(a=>a.empId===empId&&a.date.startsWith(mo));
   const absent=att.filter(a=>a.status==='Absent').length;
+  const emp=DB.g('employees').find(e=>e.id===empId);if(!emp)return;
+  const DED=DB.go('deductionRules',DEF_DED);
+  const absDivisor=_getAbsDivisor(mo);
   const grossPayable=parseFloat(v('py-gp'))||parseFloat(v('py-gr'))||0;
-  const ded=calcAbsentDeductionFromPayable(grossPayable,daysDiv,absent);
+  const basic=parseFloat(v('py-basic'))||0;
+  let ded=0;
+  const type=DED.absentType||'gross30';
+  if(type==='none')ded=0;
+  else if(type==='fixed')ded=(DED.absentFixed||0)*absent;
+  else if(type==='basic30')ded=Math.round(basic/absDivisor*absent);
+  else if(type==='grossPayable')ded=Math.round(grossPayable/absDivisor*absent);
+  else if(type==='daily'){const wDays=DB.go('settings',DEF_SET).workDays*4.33||22;ded=Math.round(parseFloat(emp.salary||0)/wDays*absent);}
+  else ded=Math.round(parseFloat(emp.salary||0)/absDivisor*absent); // gross30 default
   setV('py-abd',ded);calcNet();
-  document.getElementById('pf-abd').textContent=`GrossPayable(${N(grossPayable)})÷${daysDiv}×${absent}d`;
-  toast(`✓ ${absent} absent days → ৳${N(ded)} deduction`);
+  const abdEl=document.getElementById('pf-abd');
+  if(abdEl){
+    const baseLabel={gross30:'Gross',basic30:'Basic',grossPayable:'GrossPayable',daily:'Gross/WorkDays',fixed:'Fixed',none:'N/A'}[type]||'Gross';
+    abdEl.textContent=`${baseLabel}÷${absDivisor}×${absent}d`;
+  }
+  toast(`✓ ${absent} absent days → ৳${N(ded)} deduction (${type})`);
 }
 function autoCalcWeekendPay(){
   const empId=v('py-em');const mo=v('py-mo');
@@ -4271,7 +4555,7 @@ function calcNet(){
   // Net = Gross Payable + extra earnings - all deductions
   const grossPayable=parseFloat(v('py-gp'))||parseFloat(v('py-gr'))||0;
   // Extra earnings on top of gross payable
-  const extras=['py-tiff','py-night','py-bn','py-wknd','py-hol'].reduce((s,id)=>s+(parseFloat(v(id))||0),0);
+  const extras=['py-tiff','py-night','py-ot','py-bn','py-wknd','py-hol'].reduce((s,id)=>s+(parseFloat(v(id))||0),0);
   // Custom extra earnings rows
   let customEarn=0;
   document.querySelectorAll('#py-cear .pb-row input[type=number]').forEach(inp=>customEarn+=(parseFloat(inp.value)||0));
@@ -4298,7 +4582,7 @@ function savePay(){
   const gp=parseFloat(v('py-gp'))||gr;              // gross payable (attendance-based)
   const basic=parseFloat(v('py-basic'))||0,hra=parseFloat(v('py-hra'))||0,ta=parseFloat(v('py-ta'))||0;
   const ma=parseFloat(v('py-ma'))||0,sa=parseFloat(v('py-sa'))||0,bn=parseFloat(v('py-bn'))||0;
-  const tiff=parseFloat(v('py-tiff'))||0,night=parseFloat(v('py-night'))||0;
+  const tiff=parseFloat(v('py-tiff'))||0,night=parseFloat(v('py-night'))||0,otPay=parseFloat(v('py-ot'))||0;
   const wknd=parseFloat(v('py-wknd'))||0,hol=parseFloat(v('py-hol'))||0;
   const pf=parseFloat(v('py-pf'))||0,tx=parseFloat(v('py-tx'))||0,abd=parseFloat(v('py-abd'))||0;
   const gratuity=parseFloat(v('py-gratuity'))||0;
@@ -4307,7 +4591,7 @@ function savePay(){
   document.querySelectorAll('#py-cear .pb-row input[type=number]').forEach(inp=>customEarn+=(parseFloat(inp.value)||0));
   let customDed=0;
   document.querySelectorAll('#py-cded .pb-row input[type=number]').forEach(inp=>customDed+=(parseFloat(inp.value)||0));
-  const extras=tiff+night+bn+wknd+hol+customEarn;
+  const extras=tiff+night+otPay+bn+wknd+hol+customEarn;
   const ded=pf+tx+abd+gratuity+customDed;
   const earn=gp+extras;
   const net=Math.max(0,earn-ded);
@@ -4317,13 +4601,13 @@ function savePay(){
     // UPDATE existing record
     const rec=pr.find(x=>x.id===editId);
     if(!rec){toast('Record not found');return;}
-    Object.assign(rec,{gross:gr,grossPayable:gp,basic,hra,ta,ma,sa,bonus:bn,tiff,nightPay:night,weekendPay:wknd,holidayPay:hol,pf,tax:tx,absent:abd,gratuity,earn,ded,net,method:v('py-meth'),status:v('py-st'),notes:v('py-no'),updatedAt:Date.now()});
+    Object.assign(rec,{gross:gr,grossPayable:gp,basic,hra,ta,ma,sa,bonus:bn,tiff,nightPay:night,otPay,weekendPay:wknd,holidayPay:hol,pf,tax:tx,absent:abd,gratuity,earn,ded,net,method:v('py-meth'),status:v('py-st'),notes:v('py-no'),updatedAt:Date.now()});
     DB.s('payroll',pr);renderPayRows();_initPyRowMonthFilter();
     toast(`✓ Record updated — Net ৳${N(net)}`);
     clearPayForm();
   } else {
     // NEW record
-    pr.push({id:DB.id(),empId,month:v('py-mo'),gross:gr,grossPayable:gp,basic,hra,ta,ma,sa,bonus:bn,tiff,nightPay:night,weekendPay:wknd,holidayPay:hol,pf,tax:tx,absent:abd,gratuity,earn,ded,net,method:v('py-meth'),status:v('py-st'),notes:v('py-no'),created:Date.now()});
+    pr.push({id:DB.id(),empId,month:v('py-mo'),gross:gr,grossPayable:gp,basic,hra,ta,ma,sa,bonus:bn,tiff,nightPay:night,otPay,weekendPay:wknd,holidayPay:hol,pf,tax:tx,absent:abd,gratuity,earn,ded,net,method:v('py-meth'),status:v('py-st'),notes:v('py-no'),created:Date.now()});
     DB.s('payroll',pr);renderPayRows();_initPyRowMonthFilter();
     toast(`✓ Net ৳${N(net)} (Payable ৳${N(gp)} from fixed ৳${N(gr)})`);
   }
@@ -4381,6 +4665,7 @@ function editPayRow(id){
   document.getElementById('py-bn').value=p.bonus||0;
   const tiffEl=document.getElementById('py-tiff');if(tiffEl)tiffEl.value=p.tiff||0;
   const nightEl=document.getElementById('py-night');if(nightEl)nightEl.value=p.nightPay||0;
+  const otEl=document.getElementById('py-ot');if(otEl)otEl.value=p.otPay||0;
   const wkndEl=document.getElementById('py-wknd');if(wkndEl)wkndEl.value=p.weekendPay||0;
   const holEl=document.getElementById('py-hol');if(holEl)holEl.value=p.holidayPay||0;
   document.getElementById('py-pf').value=p.pf||0;
@@ -4404,6 +4689,7 @@ function clearPayForm(){
   ['py-gr','py-gp','py-basic','py-hra','py-ta','py-ma','py-sa','py-bn','py-wknd','py-hol','py-pf','py-tx','py-abd','py-no'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const tiffEl=document.getElementById('py-tiff');if(tiffEl)tiffEl.value='';
   const nightEl=document.getElementById('py-night');if(nightEl)nightEl.value='';
+  const otEl=document.getElementById('py-ot');if(otEl)otEl.value='';
   const gratuityEl=document.getElementById('py-gratuity');if(gratuityEl)gratuityEl.value='';
   document.getElementById('py-net').textContent='৳ 0';
   const gpEl=document.getElementById('pf-gp');if(gpEl)gpEl.textContent='';
@@ -4482,7 +4768,7 @@ function processPayroll(isReprocess){
         existing.absent=abd;
         existing.attDays=payDays;
         // Recalc ded/earn/net incorporating preserved fields
-        const bonusEtc=(existing.bonus||0)+(existing.tiff||0)+(existing.nightPay||0)+(existing.weekendPay||0)+(existing.holidayPay||0);
+        const bonusEtc=(existing.bonus||0)+(existing.tiff||0)+(existing.nightPay||0)+(existing.otPay||0)+(existing.weekendPay||0)+(existing.holidayPay||0);
         const gratuity=existing.gratuity||0;
         existing.earn=grossPayable+bonusEtc;
         existing.ded=pf+tax+abd+gratuity;
@@ -4499,8 +4785,8 @@ function processPayroll(isReprocess){
     pr.push({
       id:DB.id(),empId:emp.id,month:mo,
       gross:fixedGross,grossPayable,basic,hra,ta,ma,
-      sa:0, // admin will set special allowance
-      bonus:0,tiff:0,nightPay:0,weekendPay:0,holidayPay:0,
+      sa:0,
+      bonus:0,tiff:0,nightPay:0,otPay:0,weekendPay:0,holidayPay:0,
       pf,tax,absent:abd,gratuity:0,
       attDays:payDays,
       earn,ded,net,
@@ -6135,9 +6421,14 @@ function loadSettings(){
   setV('q-sk',QT.sick||10);setV('q-ca',QT.casual||7);setV('q-mt',QT.mat||90);setV('q-pat',QT.pat||3);setV('q-study',QT.study||5);setV('q-lwp',QT.lwp||0);
   setV('co-nm',CO.name||'');setV('co-addr',CO.address||'');setV('co-ph',CO.phone||'');setV('co-em',CO.email||'');setV('co-tg',CO.tagline||'');
   // Deduction rules
-  setV('ded-abs-type',DED.absentType||'basic30');setV('ded-abs-fixed',DED.absentFixed||0);
+  setV('ded-abs-type',DED.absentType||'gross30');
+  setV('ded-abs-divisor',DED.absentDivisor||'30');
+  setV('ded-abs-custom-div',DED.absentCustomDiv||30);
+  setV('ded-abs-fixed',DED.absentFixed||0);
   setV('ded-late-type',DED.lateType||'none');setV('ded-late-pm',DED.latePerMin||0);setV('ded-late-occ',DED.latePerOcc||0);
   toggleAbsDed();toggleLateDed();
+  // OT, Tiffin, Night pay — load when those tabs are active
+  loadOTSettings();loadTiffSettings();loadNightSettings();
   // Weekend — restore tile state
   const weDays=WE.days||[5,6];
   _weDaysSelected=new Set(weDays);
@@ -6695,8 +6986,25 @@ function renderBUList(){
 // ── Deduction Rules ──
 function toggleAbsDed(){
   const t=v('ded-abs-type');
-  const grp=document.getElementById('ded-abs-fixed-grp');
-  if(grp)grp.style.display=t==='fixed'?'flex':'none';
+  const fixGrp=document.getElementById('ded-abs-fixed-grp');
+  const divGrp=document.getElementById('ded-abs-custom-div-grp');
+  const divSel=document.getElementById('ded-abs-divisor');
+  if(fixGrp)fixGrp.style.display=t==='fixed'?'flex':'none';
+  if(divGrp)divGrp.style.display=(v('ded-abs-divisor')==='custom')?'flex':'none';
+  // Update formula preview
+  const prevEl=document.getElementById('ded-abs-preview');
+  if(!prevEl)return;
+  const divisorLabel={30:'30',calendar:'calendar days',26:'26',custom:v('ded-abs-custom-div')||'?'};
+  const d=divisorLabel[v('ded-abs-divisor')||'30']||'30';
+  const map={
+    gross30:`Gross ÷ ${d} × Absent Days`,
+    basic30:`Basic ÷ ${d} × Absent Days (Standard BD)`,
+    grossPayable:`Gross Payable ÷ ${d} × Absent Days`,
+    daily:`Gross ÷ Actual Working Days × Absent Days`,
+    fixed:`BDT ${v('ded-abs-fixed')||0} × Absent Days`,
+    none:'No deduction applied'
+  };
+  prevEl.textContent=map[t||'gross30']||'—';
 }
 function toggleLateDed(){
   const t=v('ded-late-type');
@@ -6707,29 +7015,597 @@ function toggleLateDed(){
 }
 function saveDeductionRules(){
   try{requireAuth(true);}catch(e){return;}
-  DED={absentType:v('ded-abs-type')||'daily',absentFixed:+v('ded-abs-fixed')||0,
-    lateType:v('ded-late-type')||'none',latePerMin:+v('ded-late-pm')||0,latePerOcc:+v('ded-late-occ')||0};
+  DED={
+    absentType:v('ded-abs-type')||'gross30',
+    absentDivisor:v('ded-abs-divisor')||'30',
+    absentCustomDiv:+v('ded-abs-custom-div')||30,
+    absentFixed:+v('ded-abs-fixed')||0,
+    lateType:v('ded-late-type')||'none',
+    latePerMin:+v('ded-late-pm')||0,
+    latePerOcc:+v('ded-late-occ')||0
+  };
   DB.s('deductionRules',DED);toast('✓ Deduction rules saved');
+  toggleAbsDed();
 }
-function calcAbsentDeductionFromPayable(grossPayable,daysInMonth,absentDays){
+
+function _getAbsDivisor(payMonth){
+  const DED=DB.go('deductionRules',DEF_DED);
+  const dt=DED.absentDivisor||'30';
+  if(dt==='calendar'&&payMonth){
+    const[yr,mn]=payMonth.split('-').map(Number);
+    return new Date(yr,mn,0).getDate();
+  }
+  if(dt==='26')return 26;
+  if(dt==='custom')return DED.absentCustomDiv||30;
+  return 30;
+}
+
+function calcAbsentDeductionFromPayable(grossPayable,daysInMonth,absentDays,payMonth){
   if(!absentDays)return 0;
-  return Math.round(grossPayable/daysInMonth*absentDays);
+  const DED=DB.go('deductionRules',DEF_DED);
+  const type=DED.absentType||'gross30';
+  if(type==='none')return 0;
+  if(type==='fixed')return (DED.absentFixed||0)*absentDays;
+  const div=_getAbsDivisor(payMonth)||daysInMonth||30;
+  // grossPayable is used for grossPayable type; for basic30 caller passes basic
+  return Math.round(grossPayable/div*absentDays);
 }
-function calcAbsentDeduction(emp,absentDays){
+function calcAbsentDeduction(emp,absentDays,payMonth){
   const DED=DB.go('deductionRules',DEF_DED);
   const gross=parseFloat(emp.salary)||0;
   const basic=_fmCalcBasic(gross,30,30);
   const workDays=CFG.workDays*4.33||22;
-  if(DED.absentType==='basic30')return Math.round(basic/30*absentDays);
-  if(DED.absentType==='daily')return Math.round(gross/workDays*absentDays);
-  if(DED.absentType==='fixed')return (DED.absentFixed||0)*absentDays;
+  const type=DED.absentType||'gross30';
+  const div=_getAbsDivisor(payMonth)||30;
+  if(type==='none')return 0;
+  if(type==='basic30')return Math.round(basic/div*absentDays);
+  if(type==='gross30')return Math.round(gross/div*absentDays);
+  if(type==='grossPayable')return Math.round(gross/div*absentDays);
+  if(type==='daily')return Math.round(gross/workDays*absentDays);
+  if(type==='fixed')return (DED.absentFixed||0)*absentDays;
+  return Math.round(gross/div*absentDays);
+}
+
+// ══════════════════════════════════════════
+//  OVERTIME ENGINE
+// ══════════════════════════════════════════
+const DEF_OT={method:'basic208x2',divisor:208,multiplier:2,fixedPerHr:0,triggerType:'immediate',graceMin:0,minHours:0,tiers:[],applyTo:'all',filterIds:[]};
+
+function loadOTSettings(){
+  const OT=DB.go('otRules',DEF_OT);
+  setV('ot-method',OT.method||'basic208x2');
+  setV('ot-trigger-type',OT.triggerType||'immediate');
+  setV('ot-grace-min',OT.graceMin||0);
+  setV('ot-min-hours',OT.minHours||0);
+  setV('ot-divisor',OT.divisor||208);
+  setV('ot-multiplier',OT.multiplier||2);
+  setV('ot-fixed-per-hr',OT.fixedPerHr||0);
+  setV('ot-apply-to',OT.applyTo||'all');
+  toggleOTTrigger();toggleOTMethod();toggleOTApply();
+  renderOTTiers(OT.tiers||[]);
+  renderOTFilterChips(OT);
+  updateOTPreview();
+}
+
+function toggleOTTrigger(){
+  const t=v('ot-trigger-type');
+  const g=document.getElementById('ot-grace-grp');
+  if(g)g.style.display=t==='grace'?'flex':'none';
+}
+function toggleOTMethod(){
+  const t=v('ot-method');
+  const dg=document.getElementById('ot-divisor-grp');
+  const mg=document.getElementById('ot-multiplier-grp');
+  const fg=document.getElementById('ot-fixed-grp');
+  const isFixed=t==='fixed_per_hour',isNone=t==='none';
+  if(dg)dg.style.display=(isFixed||isNone)?'none':'flex';
+  if(mg)mg.style.display=(isFixed||isNone)?'none':'flex';
+  if(fg)fg.style.display=isFixed?'flex':'none';
+}
+function toggleOTApply(){
+  const t=v('ot-apply-to');
+  const sec=document.getElementById('ot-filter-section');
+  const lbl=document.getElementById('ot-filter-label');
+  if(!sec)return;
+  sec.style.display=(t==='all')?'none':'block';
+  if(lbl){
+    if(t==='shift')lbl.textContent='Eligible Shifts';
+    else if(t==='category')lbl.textContent='Eligible Employee Categories';
+    else if(t==='dept')lbl.textContent='Eligible Departments';
+  }
+  renderOTFilterChips(DB.go('otRules',DEF_OT));
+}
+
+function renderOTTiers(tiers){
+  const el=document.getElementById('ot-tiers-list');if(!el)return;
+  if(!tiers||!tiers.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:6px 0">No tiers set — single rate applies to all OT hours.</div>';return;}
+  el.innerHTML=tiers.map((t,i)=>`
+    <div class="fe-row" style="flex-wrap:wrap;gap:8px;align-items:center">
+      <span style="font-size:12px;color:var(--muted);min-width:60px">From</span>
+      <input type="number" id="ot-tier-from-${i}" value="${t.from||0}" step="0.5" style="width:65px;font-family:var(--fm);font-size:12px" placeholder="0">
+      <span style="font-size:12px;color:var(--muted)">hr to</span>
+      <input type="number" id="ot-tier-to-${i}" value="${t.to||''}" step="0.5" style="width:65px;font-family:var(--fm);font-size:12px" placeholder="∞">
+      <span style="font-size:12px;color:var(--muted)">hrs: rate</span>
+      <input type="number" id="ot-tier-rate-${i}" value="${t.rate||2}" step="0.5" style="width:60px;font-family:var(--fm);font-size:12px" placeholder="2">
+      <span style="font-size:11px;color:var(--muted)">× (multiplier)</span>
+      <button class="btn btn-d btn-xs" onclick="removeOTTier(${i})">✕</button>
+    </div>`).join('');
+}
+function addOTTier(){
+  const OT=DB.go('otRules',DEF_OT);
+  const tiers=OT.tiers||[];
+  const lastTo=tiers.length?tiers[tiers.length-1].to||4:2;
+  tiers.push({from:parseFloat(lastTo)||2,to:'',rate:2});
+  OT.tiers=tiers;DB.s('otRules',OT);renderOTTiers(tiers);
+}
+function removeOTTier(i){
+  const OT=DB.go('otRules',DEF_OT);
+  const tiers=OT.tiers||[];tiers.splice(i,1);OT.tiers=tiers;DB.s('otRules',OT);renderOTTiers(tiers);
+}
+
+function renderOTFilterChips(OT){
+  const t=v('ot-apply-to');
+  const el=document.getElementById('ot-filter-chips');if(!el)return;
+  const sel=new Set(OT.filterIds||[]);
+  let items=[];
+  if(t==='shift')items=DB.g('shifts').map(s=>({id:s.id,label:s.name+' '+s.start+'–'+s.end}));
+  else if(t==='category')items=['Permanent','Probationary','Contractual','Part-time','Daily-rated (Temporary)','Intern/Trainee','Expatriate'].map(c=>({id:c,label:c}));
+  else if(t==='dept')items=[...new Set(DB.g('employees').map(e=>e.dept).filter(Boolean))].map(d=>({id:d,label:d}));
+  el.innerHTML=items.map(it=>`
+    <label style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;border:1.5px solid ${sel.has(it.id)?'var(--accent2)':'var(--border)'};background:${sel.has(it.id)?'var(--accent-soft)':'var(--bg)'};cursor:pointer;font-size:12px;font-weight:${sel.has(it.id)?'600':'400'}">
+      <input type="checkbox" ${sel.has(it.id)?'checked':''} onchange="toggleOTFilter('${it.id}',this.checked)" style="accent-color:var(--accent2)">
+      ${it.label}
+    </label>`).join('');
+}
+let _otFilterSel=new Set();
+function toggleOTFilter(id,on){
+  const OT=DB.go('otRules',DEF_OT);
+  const ids=new Set(OT.filterIds||[]);
+  if(on)ids.add(id);else ids.delete(id);
+  OT.filterIds=[...ids];DB.s('otRules',OT);
+  renderOTFilterChips(OT);
+}
+
+function saveOTRules(){
+  try{requireAuth(true);}catch(e){return;}
+  const OT=DB.go('otRules',DEF_OT);
+  // Collect tiers
+  const tiers=[];
+  document.querySelectorAll('[id^="ot-tier-from-"]').forEach((el,i)=>{
+    const from=parseFloat(el.value)||0;
+    const toEl=document.getElementById('ot-tier-to-'+i);
+    const rateEl=document.getElementById('ot-tier-rate-'+i);
+    tiers.push({from,to:toEl?parseFloat(toEl.value)||null:null,rate:rateEl?parseFloat(rateEl.value)||2:2});
+  });
+  const saved={
+    method:v('ot-method')||'basic208x2',
+    divisor:+v('ot-divisor')||208,
+    multiplier:+v('ot-multiplier')||2,
+    fixedPerHr:+v('ot-fixed-per-hr')||0,
+    triggerType:v('ot-trigger-type')||'immediate',
+    graceMin:+v('ot-grace-min')||0,
+    minHours:+v('ot-min-hours')||0,
+    tiers,
+    applyTo:v('ot-apply-to')||'all',
+    filterIds:OT.filterIds||[]
+  };
+  DB.s('otRules',saved);
+  updateOTPreview();
+  toast('✓ Overtime rules saved');
+}
+
+function updateOTPreview(){
+  const el=document.getElementById('ot-formula-preview');if(!el)return;
+  const OT=DB.go('otRules',DEF_OT);
+  const m=OT.method||'basic208x2';
+  const d=OT.divisor||208,mul=OT.multiplier||2,fph=OT.fixedPerHr||0;
+  const map={
+    basic208x2:`Basic ÷ ${d} × ${mul} × OT Hours`,
+    basic_custom:`Basic ÷ ${d} × ${mul} × OT Hours`,
+    gross208x2:`Gross ÷ ${d} × ${mul} × OT Hours`,
+    gross_custom:`Gross ÷ ${d} × ${mul} × OT Hours`,
+    fixed_per_hour:`BDT ${fph} × OT Hours`,
+    none:'OT pay disabled'
+  };
+  el.textContent=map[m]||'—';
+}
+
+function calcOTPay(emp,otHours,basic,fixedGross){
+  if(!otHours||otHours<=0)return 0;
+  const OT=DB.go('otRules',DEF_OT);
+  if(OT.method==='none')return 0;
+  const minH=OT.minHours||0;
+  if(otHours<minH)return 0;
+  // Tiered OT?
+  const tiers=OT.tiers||[];
+  if(tiers.length){
+    let total=0;
+    tiers.forEach(tier=>{
+      const from=tier.from||0,to=tier.to||Infinity;
+      if(otHours>from){
+        const hrInTier=Math.min(otHours,to)-from;
+        if(hrInTier>0){
+          const hrRate=_otHourlyRate(OT,basic,fixedGross);
+          total+=hrRate*(tier.rate||2)*hrInTier;
+        }
+      }
+    });
+    return Math.round(total);
+  }
+  const div=OT.divisor||208,mul=OT.multiplier||2;
+  if(OT.method==='basic208x2'||OT.method==='basic_custom')return Math.round(basic/div*mul*otHours);
+  if(OT.method==='gross208x2'||OT.method==='gross_custom')return Math.round(fixedGross/div*mul*otHours);
+  if(OT.method==='fixed_per_hour')return Math.round((OT.fixedPerHr||0)*otHours);
+  return Math.round(basic/208*2*otHours);
+}
+function _otHourlyRate(OT,basic,gross){
+  const div=OT.divisor||208;
+  if(OT.method==='basic208x2'||OT.method==='basic_custom')return basic/div;
+  if(OT.method==='gross208x2'||OT.method==='gross_custom')return gross/div;
+  return OT.fixedPerHr||0;
+}
+function _otEligible(emp){
+  const OT=DB.go('otRules',DEF_OT);
+  if(!OT||OT.applyTo==='all')return true;
+  const ids=OT.filterIds||[];
+  if(OT.applyTo==='shift')return ids.includes(emp.shift||'');
+  if(OT.applyTo==='category')return ids.includes(emp.type||'');
+  if(OT.applyTo==='dept')return ids.includes(emp.dept||'');
+  return true;
+}
+
+function _calcOTHoursFromAtt(att,empId,payMonth){
+  const OT=DB.go('otRules',DEF_OT);
+  const emp=DB.g('employees').find(e=>e.id===empId);if(!emp)return 0;
+  if(!_otEligible(emp))return 0;
+  // Get the shift end time for this employee
+  const shiftEnd=_getShiftEndTime(emp);
+  if(!shiftEnd)return 0;
+  const graceMin=OT.triggerType==='grace'?+(OT.graceMin||0):0;
+  let totalOTHrs=0;
+  att.filter(a=>a.empId===empId&&a.date.startsWith(payMonth)&&a.checkOut).forEach(a=>{
+    const otHrs=_calcOTHoursForRecord(a.checkOut,shiftEnd,graceMin);
+    if(otHrs>0)totalOTHrs+=otHrs;
+  });
+  return parseFloat(totalOTHrs.toFixed(2));
+}
+function _getShiftEndTime(emp){
+  if(emp.shift){
+    const sh=DB.g('shifts').find(s=>s.id===emp.shift);
+    if(sh&&sh.end)return sh.end;
+  }
+  return DB.go('settings',DEF_SET).workEnd||'18:00';
+}
+function _calcOTHoursForRecord(checkOut,shiftEnd,graceMin){
+  if(!checkOut||!shiftEnd)return 0;
+  const toMins=t=>{const[h,m]=(t||'00:00').split(':').map(Number);return h*60+(m||0);};
+  let outMins=toMins(checkOut);
+  let endMins=toMins(shiftEnd);
+  // Handle cross-midnight (night shifts)
+  if(outMins<endMins-60)outMins+=1440; // add 24h if checkout is "before" shift end
+  const otStart=endMins+graceMin;
+  const diff=outMins-otStart;
+  return diff>0?diff/60:0;
+}
+
+function autoCalcOTPay(){
+  const empId=v('py-em');const mo=v('py-mo');
+  if(!empId||!mo){toast('Select employee and month first');return;}
+  const emp=DB.g('employees').find(e=>e.id===empId);if(!emp)return;
+  const att=DB.g('attendance').filter(a=>a.empId===empId&&a.date.startsWith(mo));
+  const otHours=_calcOTHoursFromAtt(att,empId,mo);
+  const basic=parseFloat(v('py-basic'))||0;
+  const gross=parseFloat(v('py-gr'))||parseFloat(emp.salary)||0;
+  const otPay=calcOTPay(emp,otHours,basic,gross);
+  const otEl=document.getElementById('py-ot');if(otEl)otEl.value=otPay;
+  const pfEl=document.getElementById('pf-ot');if(pfEl)pfEl.textContent=`${otHours.toFixed(1)} OT hrs → ৳${N(otPay)}`;
+  calcNet();
+  toast(`✓ ${otHours.toFixed(1)} OT hrs → ৳${N(otPay)}`);
+}
+
+// ══════════════════════════════════════════
+//  TIFFIN RULES ENGINE
+// ══════════════════════════════════════════
+const DEF_TIFF={method:'fixed_monthly',globalAmt:0,otThreshold:2,otAmt:0,shiftAmts:{},categoryAmts:{},eligibility:'all',eligFilterIds:[]};
+const EMP_CATEGORIES=['Permanent','Probationary','Contractual','Part-time','Daily-rated (Temporary)','Intern/Trainee','Expatriate'];
+
+function loadTiffSettings(){
+  const T=DB.go('tiffRules',DEF_TIFF);
+  setV('tiff-method',T.method||'fixed_monthly');
+  setV('tiff-global-amt',T.globalAmt||0);
+  setV('tiff-ot-threshold',T.otThreshold||2);
+  setV('tiff-ot-amt',T.otAmt||0);
+  setV('tiff-eligibility',T.eligibility||'all');
+  toggleTiffMethod();toggleTiffEligibility();
+  renderTiffShiftRows(T);renderTiffCategoryRows(T);renderTiffEligChips(T);
+}
+function toggleTiffMethod(){
+  const m=v('tiff-method');
+  const fg=document.getElementById('tiff-fixed-grp');
+  const oth=document.getElementById('tiff-ot-hours-grp');
+  const ota=document.getElementById('tiff-ot-amt-grp');
+  const ss=document.getElementById('tiff-shift-section');
+  const cs=document.getElementById('tiff-category-section');
+  if(fg)fg.style.display=(m==='fixed_monthly'||m==='per_day')?'flex':'none';
+  if(oth)oth.style.display=m==='per_hour_ot'?'flex':'none';
+  if(ota)ota.style.display=m==='per_hour_ot'?'flex':'none';
+  if(ss)ss.style.display=m==='shift_wise'?'block':'none';
+  if(cs)cs.style.display=m==='category_wise'?'block':'none';
+}
+function toggleTiffEligibility(){
+  const t=v('tiff-eligibility');
+  const sec=document.getElementById('tiff-eligibility-filter');
+  const lbl=document.getElementById('tiff-elig-label');
+  if(!sec)return;
+  sec.style.display=(t==='all')?'none':'block';
+  if(lbl){
+    if(t==='specific_shift')lbl.textContent='Eligible Shifts';
+    else if(t==='specific_category')lbl.textContent='Eligible Categories';
+    else if(t==='specific_dept')lbl.textContent='Eligible Departments';
+  }
+  renderTiffEligChips(DB.go('tiffRules',DEF_TIFF));
+}
+function renderTiffShiftRows(T){
+  const el=document.getElementById('tiff-shift-rows');if(!el)return;
+  const shifts=DB.g('shifts');
+  if(!shifts.length){el.innerHTML='<div style="color:var(--muted);font-size:12px">No shifts defined yet.</div>';return;}
+  el.innerHTML=shifts.map(s=>`
+    <div class="fe-row" style="flex-wrap:wrap;gap:8px">
+      <span class="fe-lbl" style="min-width:160px">⏱ ${s.name} <span style="font-size:10.5px;color:var(--muted);font-family:var(--fm)">(${s.start}–${s.end})</span></span>
+      <input class="fe-inp" type="number" id="tiff-shift-${s.id}" value="${(T.shiftAmts||{})[s.id]||0}" placeholder="0">
+      <span class="fe-unit">BDT/mo</span>
+    </div>`).join('');
+}
+function renderTiffCategoryRows(T){
+  const el=document.getElementById('tiff-category-rows');if(!el)return;
+  el.innerHTML=EMP_CATEGORIES.map(cat=>`
+    <div class="fe-row" style="flex-wrap:wrap;gap:8px">
+      <span class="fe-lbl" style="min-width:160px">👤 ${cat}</span>
+      <input class="fe-inp" type="number" id="tiff-cat-${cat.replace(/[^a-zA-Z0-9]/g,'_')}" value="${(T.categoryAmts||{})[cat]||0}" placeholder="0">
+      <span class="fe-unit">BDT/mo</span>
+    </div>`).join('');
+}
+function renderTiffEligChips(T){
+  const t=v('tiff-eligibility');
+  const el=document.getElementById('tiff-elig-chips');if(!el)return;
+  const sel=new Set(T.eligFilterIds||[]);
+  let items=[];
+  if(t==='specific_shift')items=DB.g('shifts').map(s=>({id:s.id,label:s.name}));
+  else if(t==='specific_category')items=EMP_CATEGORIES.map(c=>({id:c,label:c}));
+  else if(t==='specific_dept')items=[...new Set(DB.g('employees').map(e=>e.dept).filter(Boolean))].map(d=>({id:d,label:d}));
+  el.innerHTML=items.map(it=>`
+    <label style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;border:1.5px solid ${sel.has(it.id)?'var(--accent2)':'var(--border)'};background:${sel.has(it.id)?'var(--accent-soft)':'var(--bg)'};cursor:pointer;font-size:12px;font-weight:${sel.has(it.id)?'600':'400'}">
+      <input type="checkbox" ${sel.has(it.id)?'checked':''} onchange="toggleTiffEligFilter('${it.id}',this.checked)" style="accent-color:var(--accent2)">
+      ${it.label}
+    </label>`).join('');
+}
+function toggleTiffEligFilter(id,on){
+  const T=DB.go('tiffRules',DEF_TIFF);
+  const ids=new Set(T.eligFilterIds||[]);
+  if(on)ids.add(id);else ids.delete(id);
+  T.eligFilterIds=[...ids];DB.s('tiffRules',T);renderTiffEligChips(T);
+}
+function saveTiffRules(){
+  try{requireAuth(true);}catch(e){return;}
+  const T=DB.go('tiffRules',DEF_TIFF);
+  const shiftAmts={};
+  DB.g('shifts').forEach(s=>{const el=document.getElementById('tiff-shift-'+s.id);if(el)shiftAmts[s.id]=parseFloat(el.value)||0;});
+  const categoryAmts={};
+  EMP_CATEGORIES.forEach(cat=>{const el=document.getElementById('tiff-cat-'+cat.replace(/[^a-zA-Z0-9]/g,'_'));if(el)categoryAmts[cat]=parseFloat(el.value)||0;});
+  const saved={
+    method:v('tiff-method')||'fixed_monthly',
+    globalAmt:+v('tiff-global-amt')||0,
+    otThreshold:+v('tiff-ot-threshold')||2,
+    otAmt:+v('tiff-ot-amt')||0,
+    shiftAmts,categoryAmts,
+    eligibility:v('tiff-eligibility')||'all',
+    eligFilterIds:T.eligFilterIds||[]
+  };
+  DB.s('tiffRules',saved);toast('✓ Tiffin rules saved');
+}
+function calcTiffAllowance(emp,payDays,otHoursTotal){
+  const T=DB.go('tiffRules',DEF_TIFF);
+  if(!T||T.method==='none')return 0;
+  // Eligibility check
+  if(T.eligibility!=='all'){
+    const ids=T.eligFilterIds||[];
+    if(T.eligibility==='specific_shift'&&!ids.includes(emp.shift||''))return 0;
+    if(T.eligibility==='specific_category'&&!ids.includes(emp.type||''))return 0;
+    if(T.eligibility==='specific_dept'&&!ids.includes(emp.dept||''))return 0;
+  }
+  if(T.method==='fixed_monthly')return T.globalAmt||0;
+  if(T.method==='per_day')return Math.round((T.globalAmt||0)*payDays);
+  if(T.method==='per_hour_ot'){
+    const thresh=T.otThreshold||2;
+    if((otHoursTotal||0)>=thresh)return T.otAmt||0;
+    return 0;
+  }
+  if(T.method==='shift_wise'){
+    const shiftAmt=(T.shiftAmts||{})[emp.shift||'']||0;
+    return shiftAmt;
+  }
+  if(T.method==='category_wise'){
+    const catAmt=(T.categoryAmts||{})[emp.type||'']||0;
+    return catAmt;
+  }
   return 0;
 }
-function calcLateDeduction(lateMinutes,lateOccurrences){
-  const DED=DB.go('deductionRules',DEF_DED);
-  if(DED.lateType==='per_minute')return Math.round((DED.latePerMin||0)*lateMinutes);
-  if(DED.lateType==='per_occurrence')return (DED.latePerOcc||0)*lateOccurrences;
+
+// ══════════════════════════════════════════
+//  NIGHT PAY ENGINE
+// ══════════════════════════════════════════
+const DEF_NIGHT={method:'per_night',globalAmt:0,pctAmt:0,nightStart:'22:00',nightEnd:'06:00',minHours:2,shiftAmts:{},applyTo:'all',filterIds:[]};
+
+function loadNightSettings(){
+  const N=DB.go('nightPayRules',DEF_NIGHT);
+  setV('night-method',N.method||'per_night');
+  setV('night-global-amt',N.globalAmt||0);
+  setV('night-pct-amt',N.pctAmt||0);
+  setV('night-start',N.nightStart||'22:00');
+  setV('night-end',N.nightEnd||'06:00');
+  setV('night-min-hours',N.minHours||2);
+  setV('night-apply-to',N.applyTo||'all');
+  toggleNightMethod();toggleNightApply();
+  renderNightShiftRows(N);renderNightFilterChips(N);
+}
+function toggleNightMethod(){
+  const m=v('night-method');
+  const ag=document.getElementById('night-amt-grp');
+  const pg=document.getElementById('night-pct-grp');
+  const ss=document.getElementById('night-shift-section');
+  const lbl=document.getElementById('night-amt-label');
+  const isPct=m==='pct_basic'||m==='pct_gross';
+  const isShift=m==='shift_wise';
+  if(pg)pg.style.display=isPct?'flex':'none';
+  if(ag)ag.style.display=(isPct||isShift||m==='none')?'none':'flex';
+  if(ss)ss.style.display=isShift?'block':'none';
+  if(lbl){
+    if(m==='fixed_monthly')lbl.textContent='Fixed Monthly Amount (BDT)';
+    else if(m==='per_night')lbl.textContent='Amount per Night Shift (BDT)';
+    else if(m==='per_hour')lbl.textContent='Amount per Night Hour (BDT)';
+  }
+  updateNightPreview();
+}
+function toggleNightApply(){
+  const t=v('night-apply-to');
+  const sec=document.getElementById('night-filter-section');
+  const lbl=document.getElementById('night-filter-label');
+  if(!sec)return;
+  sec.style.display=(t==='all')?'none':'block';
+  if(lbl){
+    if(t==='shift')lbl.textContent='Eligible Night Shifts';
+    else if(t==='category')lbl.textContent='Eligible Employee Categories';
+    else if(t==='dept')lbl.textContent='Eligible Departments';
+  }
+  renderNightFilterChips(DB.go('nightPayRules',DEF_NIGHT));
+}
+function renderNightShiftRows(N){
+  const el=document.getElementById('night-shift-rows');if(!el)return;
+  const shifts=DB.g('shifts');
+  if(!shifts.length){el.innerHTML='<div style="color:var(--muted);font-size:12px">No shifts defined yet.</div>';return;}
+  el.innerHTML=shifts.map(s=>`
+    <div class="fe-row" style="flex-wrap:wrap;gap:8px">
+      <span class="fe-lbl" style="min-width:160px">🌙 ${s.name} <span style="font-size:10.5px;color:var(--muted);font-family:var(--fm)">(${s.start}–${s.end})</span></span>
+      <input class="fe-inp" type="number" id="night-shift-${s.id}" value="${(N.shiftAmts||{})[s.id]||0}" placeholder="0">
+      <span class="fe-unit">BDT/mo</span>
+    </div>`).join('');
+}
+function renderNightFilterChips(N){
+  const t=v('night-apply-to');
+  const el=document.getElementById('night-filter-chips');if(!el)return;
+  const sel=new Set(N.filterIds||[]);
+  let items=[];
+  if(t==='shift')items=DB.g('shifts').map(s=>({id:s.id,label:s.name}));
+  else if(t==='category')items=EMP_CATEGORIES.map(c=>({id:c,label:c}));
+  else if(t==='dept')items=[...new Set(DB.g('employees').map(e=>e.dept).filter(Boolean))].map(d=>({id:d,label:d}));
+  el.innerHTML=items.map(it=>`
+    <label style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;border:1.5px solid ${sel.has(it.id)?'var(--accent2)':'var(--border)'};background:${sel.has(it.id)?'var(--accent-soft)':'var(--bg)'};cursor:pointer;font-size:12px;font-weight:${sel.has(it.id)?'600':'400'}">
+      <input type="checkbox" ${sel.has(it.id)?'checked':''} onchange="toggleNightFilter('${it.id}',this.checked)" style="accent-color:var(--accent2)">
+      ${it.label}
+    </label>`).join('');
+}
+function toggleNightFilter(id,on){
+  const N=DB.go('nightPayRules',DEF_NIGHT);
+  const ids=new Set(N.filterIds||[]);
+  if(on)ids.add(id);else ids.delete(id);
+  N.filterIds=[...ids];DB.s('nightPayRules',N);renderNightFilterChips(N);
+}
+function saveNightRules(){
+  try{requireAuth(true);}catch(e){return;}
+  const N=DB.go('nightPayRules',DEF_NIGHT);
+  const shiftAmts={};
+  DB.g('shifts').forEach(s=>{const el=document.getElementById('night-shift-'+s.id);if(el)shiftAmts[s.id]=parseFloat(el.value)||0;});
+  const saved={
+    method:v('night-method')||'per_night',
+    globalAmt:+v('night-global-amt')||0,
+    pctAmt:+v('night-pct-amt')||0,
+    nightStart:v('night-start')||'22:00',
+    nightEnd:v('night-end')||'06:00',
+    minHours:+v('night-min-hours')||2,
+    shiftAmts,
+    applyTo:v('night-apply-to')||'all',
+    filterIds:N.filterIds||[]
+  };
+  DB.s('nightPayRules',saved);
+  updateNightPreview();
+  toast('✓ Night pay rules saved');
+}
+function updateNightPreview(){
+  const el=document.getElementById('night-formula-preview');if(!el)return;
+  const N=DB.go('nightPayRules',DEF_NIGHT);
+  const m=N.method||'per_night';
+  const map={
+    fixed_monthly:`Fixed BDT ${N.globalAmt||0}/month for night workers`,
+    per_night:`BDT ${N.globalAmt||0} per night shift worked`,
+    pct_basic:`${N.pctAmt||0}% of Basic Salary`,
+    pct_gross:`${N.pctAmt||0}% of Gross Salary`,
+    per_hour:`BDT ${N.globalAmt||0} × Night Hours Worked`,
+    shift_wise:'Per-shift amounts (see table above)',
+    none:'Night pay disabled'
+  };
+  el.textContent=`Night window: ${N.nightStart||'22:00'}–${N.nightEnd||'06:00'} · Min ${N.minHours||2} hrs · ${map[m]||'—'}`;
+}
+function _nightEligible(emp){
+  const N=DB.go('nightPayRules',DEF_NIGHT);
+  if(!N||N.applyTo==='all')return true;
+  const ids=N.filterIds||[];
+  if(N.applyTo==='shift')return ids.includes(emp.shift||'');
+  if(N.applyTo==='category')return ids.includes(emp.type||'');
+  if(N.applyTo==='dept')return ids.includes(emp.dept||'');
+  return true;
+}
+function _calcNightHoursForRecord(checkIn,checkOut,nightStart,nightEnd){
+  if(!checkIn||!checkOut)return 0;
+  const toMins=t=>{const[h,m]=(t||'00:00').split(':').map(Number);return h*60+(m||0);};
+  let inMins=toMins(checkIn),outMins=toMins(checkOut);
+  let nsMin=toMins(nightStart),neMin=toMins(nightEnd);
+  if(outMins<=inMins)outMins+=1440; // cross-midnight checkout
+  if(neMin<=nsMin)neMin+=1440;     // cross-midnight night window
+  // Count overlap
+  const start=Math.max(inMins,nsMin);
+  const end=Math.min(outMins,neMin);
+  if(end>start)return(end-start)/60;
+  // Check also shifted window (if shift wraps to next day)
+  const start2=Math.max(inMins+1440,nsMin);
+  const end2=Math.min(outMins+1440,neMin);
+  if(end2>start2)return(end2-start2)/60;
   return 0;
+}
+function calcNightPayForEmp(emp,att,payDays,basic,fixedGross){
+  const N=DB.go('nightPayRules',DEF_NIGHT);
+  if(!N||N.method==='none')return 0;
+  if(!_nightEligible(emp))return 0;
+  const m=N.method||'per_night';
+  if(m==='fixed_monthly')return N.globalAmt||0;
+  if(m==='pct_basic')return Math.round(basic*(N.pctAmt||0)/100);
+  if(m==='pct_gross')return Math.round(fixedGross*(N.pctAmt||0)/100);
+  if(m==='shift_wise'){
+    const shiftAmt=(N.shiftAmts||{})[emp.shift||'']||0;
+    return shiftAmt;
+  }
+  // Count night shifts / hours from attendance
+  let nightShifts=0,nightHours=0;
+  (att||[]).forEach(a=>{
+    const hrs=_calcNightHoursForRecord(a.checkIn,a.checkOut,N.nightStart||'22:00',N.nightEnd||'06:00');
+    if(hrs>=(N.minHours||2)){nightShifts++;nightHours+=hrs;}
+  });
+  if(m==='per_night')return Math.round((N.globalAmt||0)*nightShifts);
+  if(m==='per_hour')return Math.round((N.globalAmt||0)*nightHours);
+  return 0;
+}
+function autoCalcNightPay(){
+  const empId=v('py-em');const mo=v('py-mo');
+  if(!empId||!mo){toast('Select employee and month first');return;}
+  const emp=DB.g('employees').find(e=>e.id===empId);if(!emp)return;
+  const att=DB.g('attendance').filter(a=>a.empId===empId&&a.date.startsWith(mo));
+  const basic=parseFloat(v('py-basic'))||0;
+  const gross=parseFloat(v('py-gr'))||parseFloat(emp.salary)||0;
+  const payDays=att.filter(a=>['Present','Late','Early Out','Half Day','Late & Early Out'].includes(a.status)).length||30;
+  const nightPay=calcNightPayForEmp(emp,att,payDays,basic,gross);
+  const nightEl=document.getElementById('py-night');if(nightEl)nightEl.value=nightPay;
+  const pfEl=document.getElementById('pf-night');if(pfEl)pfEl.textContent=`→ ৳${N(nightPay)}`;
+  calcNet();
+  toast(`✓ Night pay calculated → ৳${N(nightPay)}`);
 }
 
 // ── Designations ──
@@ -6938,7 +7814,14 @@ async function saveChgPwd(){
 }
 
 function swTab(i){
-  document.querySelectorAll('.tab').forEach((t,j)=>{t.classList.toggle('active',j===i);const p=document.getElementById('tp-'+j);if(p)p.classList.toggle('active',j===i);});
+  // Activate tab button
+  document.querySelectorAll('.tab').forEach(t=>{
+    // Extract the tab index from the onclick attribute
+    const m=(t.getAttribute('onclick')||'').match(/swTab\((\d+)\)/);
+    if(m)t.classList.toggle('active',+m[1]===i);
+  });
+  // Show/hide tab panels
+  for(let j=0;j<=15;j++){const p=document.getElementById('tp-'+j);if(p)p.classList.toggle('active',j===i);}
 }
 
 // ══════════════════════════════════════════
