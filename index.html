@@ -1142,6 +1142,15 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
 
     <!-- ADD EMPLOYEE -->
     <div id="sec-add-employee" class="section">
+      <!-- Edit existing employee picker -->
+      <div class="card" style="max-width:820px;margin-bottom:14px">
+        <div class="ch"><span class="ct">✏ Edit Existing Employee</span></div>
+        <div class="cb" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:240px"><div id="edit-emp-picker" class="ls-wrap"></div><input type="hidden" id="edit-emp-sel"></div>
+          <button class="btn btn-p" onclick="(function(){const id=document.getElementById('edit-emp-sel').value;if(!id){toast('Select an employee to edit');return;}openEmpEdit(id);})()">Load for Editing</button>
+          <span style="font-size:11.5px;color:var(--muted)">Search and pick an employee, then click Load to edit their details below.</span>
+        </div>
+      </div>
       <div class="card" style="max-width:820px">
         <div class="ch">
           <span class="ct" id="add-emp-title">New Employee</span>
@@ -3192,20 +3201,8 @@ const DB = (function () {
   function _showCloudStatus(state) {
     const el = document.getElementById('_cloud_status');
     if (!el) return;
-    // Silent states — never show these
-    if (state === 'connecting' || state === 'online' || state === 'saved') {
-      el.style.display = 'none'; return;
-    }
-    const cfg = {
-      saving:   { bg: '#9a6e00', icon: '↑', txt: 'Saving…' },
-      offline:  { bg: '#b5451b', icon: '⚠', txt: 'Offline — changes queued' },
-      error:    { bg: '#c0392b', icon: '✕', txt: 'Sync error' },
-      noaccess: { bg: '#5a2d82', icon: '🔒', txt: 'Access denied by server' },
-    };
-    const c = cfg[state] || cfg.saving;
-    el.style.background = c.bg;
-    el.innerHTML = `<span>${c.icon}</span><span>${c.txt}</span>`;
-    el.style.display = 'flex';
+    // Always hide — app works fully offline via localStorage, no banner needed
+    el.style.display = 'none';
   }
 
   // ── Public API ──
@@ -3482,7 +3479,11 @@ function nav(page){
 
 function refresh(p){
   if(p==='dashboard')renderDash();
-  if(p==='add-employee'){fillBuSel('e-bu');fillDesigSel('e-title');fillShiftSel();document.getElementById('e-join').value=today();}
+  if(p==='add-employee'){fillBuSel('e-bu');fillDesigSel('e-title');fillShiftSel();document.getElementById('e-join').value=today();
+    // Init edit picker
+    if(!_pickers['edit-emp-picker']){EmpPicker('edit-emp-picker','edit-emp-sel',{placeholder:'Search employee to edit…',includeTerminated:false});}
+    else{_lpRenderDrop('edit-emp-picker','');}
+  }
   if(p==='attendance'){fillEmpSel('at-em');document.getElementById('at-dt').value=today();_fillAttFilters();renderAttLog();renderAttToday();}
   if(p==='leave'){fillEmpSel('lv-em');renderLvRows();renderLvBal();}
   if(p==='payroll'){fillEmpSel('py-em');renderPayRows();document.getElementById('py-mo').value=moStr();_initPyRowMonthFilter();_initPyProcPicker();}
@@ -3810,7 +3811,7 @@ function saveEmp(){
     if(joinMo<curMo){toast('⚠ Join date cannot be in a previous month');return;}
   }
   const emps=DB.g('employees');
-  // EID always auto-generated — never manually entered
+  // EID always auto-generated
   const eidCfg=DB.go('eidConfig',{prefix:'',digits:4,next:null});
   const nums=emps.map(e=>parseInt((e.eid||'').replace(/\D/g,''))||0);
   const maxNum=nums.length?Math.max(...nums):999;
@@ -3822,11 +3823,10 @@ function saveEmp(){
     section:v('e-sec'),subsection:v('e-sub'),title:v('e-title'),type:v('e-type'),
     shift:v('e-shift'),
     join:v('e-join'),salary:v('e-sal'),status:v('e-st'),photo:photoB64,joinedAt:Date.now()});
-  DB.s('employees',emps);photoB64='';clearEmpForm();toast(`✓ ${fn} ${ln} added`);
+  DB.s('employees',emps);photoB64='';clearEmpForm();toast(`✓ ${fn} ${ln} added (ID: ${eid})`);
 }
 function clearEmpForm(){
-  ['e-fn','e-ln','e-em','e-ph','e-dob','e-nid','e-addr','e-sal'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('e-eid').value='';
+  ['e-fn','e-ln','e-em','e-ph','e-dob','e-nid','e-addr','e-sal','e-eid'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('e-eid-preview').textContent='—';
   ['e-gen','e-bu','e-dept','e-sec','e-sub','e-type','e-st'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
   document.getElementById('photo-prev').innerHTML='<span style="font-size:20px">📷</span><span style="font-size:9.5px;color:var(--muted)">Upload</span>';
@@ -3870,6 +3870,7 @@ function renderEmpTbl(){
       <td class="mono">${e.join||'—'}</td><td>${stB(e.status)}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-t btn-xs" onclick="openProfile('${e.id}')">View</button>
+        <button class="btn btn-p btn-xs" onclick="openEmpEdit('${e.id}')">✏ Edit</button>
         <button class="btn btn-d btn-xs" onclick="delEmp('${e.id}')">Remove</button>
       </div></td>
     </tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="empty-i">👥</div>No employees match the filter</div></td></tr>';
@@ -3922,7 +3923,6 @@ function openProfile(id){
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
       <button class="btn btn-pr btn-sm no-print" onclick="printEmpProfile('${id}')">🖨 Print Profile</button>
-      ${currentUser?.app_role==='hr_admin'?`<button class="btn btn-p btn-sm" onclick="openEmpEdit('${id}')">✏ Edit Employee</button>`:''}
     </div>`;
   document.getElementById('prof-modal').classList.remove('hidden');
 }
@@ -3947,6 +3947,7 @@ function openEmpEdit(id){
   const badge=document.getElementById('edit-emp-badge');
   badge.style.display='flex';
   document.getElementById('edit-emp-eid').textContent=e.eid||'—';
+  document.getElementById('e-eid').value=e.eid||'';
   document.getElementById('e-eid-preview').textContent=e.eid||'—';
 
   // Fill photo
@@ -4039,6 +4040,8 @@ function cancelEmpEdit(){
   document.getElementById('emp-save-btn').textContent='Save Employee';
   document.getElementById('edit-emp-badge').style.display='none';
   clearEmpForm();
+  // Reset edit picker
+  if(_pickers['edit-emp-picker'])_lpClear('edit-emp-picker');
 }
 
 // ══════════════════════════════════════════
@@ -7965,7 +7968,7 @@ function _lpHighlight(containerId,opts){
 function fillEmpSel(selId, all=false){
   // Legacy: map old select IDs to new picker container IDs
   const pickerMap={'at-em':'at-em-pick','lv-em':'lv-em-pick','py-em':'py-em-pick',
-    'jc-em':'jc-em-pick','ic-em':'ic-em-pick','sp-em':'sp-em-pick'};
+    'jc-em':'jc-em-pick','ic-em':'ic-em-pick','sp-em':'sp-em-pick','tr-em':'tr-em-pick'};
   const pickId=pickerMap[selId];
   if(pickId){
     // Init picker if not already done
