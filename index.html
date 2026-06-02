@@ -1143,8 +1143,15 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
     <!-- ADD EMPLOYEE -->
     <div id="sec-add-employee" class="section">
       <div class="card" style="max-width:820px">
-        <div class="ch"><span class="ct">New Employee</span></div>
+        <div class="ch">
+          <span class="ct" id="add-emp-title">New Employee</span>
+          <div id="edit-emp-badge" style="display:none;align-items:center;gap:8px">
+            <span id="edit-emp-eid" style="font-family:var(--fm);font-size:13px;font-weight:700;color:var(--accent2);padding:3px 10px;background:var(--accent-soft);border-radius:6px;letter-spacing:1px"></span>
+            <button class="btn btn-s btn-xs" onclick="cancelEmpEdit()">✕ Cancel Edit</button>
+          </div>
+        </div>
         <div class="cb">
+          <input type="hidden" id="e-edit-id">
           <div style="display:flex;gap:18px;align-items:flex-start;margin-bottom:16px">
             <div>
               <div class="photo-up" id="photo-prev" onclick="document.getElementById('photo-inp').click()">
@@ -1176,7 +1183,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
             <div class="fgrp"><label>Shift</label><select id="e-shift"><option value="">Default Shift</option></select></div>
             <div class="fgrp"><label>Employee Type</label><select id="e-type"><option>Permanent</option><option>Probationary</option><option>Contractual</option><option>Part-time</option><option>Daily-rated (Temporary)</option><option>Intern/Trainee</option><option>Expatriate</option></select></div>
             <div class="fgrp"><label>Join Date</label><input type="date" id="e-join"></div>
-            <div class="fgrp"><label>Employee ID <span style='color:var(--a2);font-size:9px'>auto-generated</span></label>
+            <div class="fgrp"><label>Employee ID <span style='color:var(--a2);font-size:9px' id="e-eid-lbl">auto-generated</span></label>
               <div style="display:flex;align-items:center;gap:8px">
                 <div id="e-eid-preview" style="flex:1;padding:9px 12px;background:var(--il);border:1px solid var(--border);border-radius:7px;font-family:var(--fm);letter-spacing:1.5px;font-size:14px;font-weight:700;color:var(--a2);min-height:38px">—</div>
                 <span style="font-size:10.5px;color:var(--muted)">🔒 Auto</span>
@@ -1187,8 +1194,8 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
             <div class="fgrp"><label>Status</label><select id="e-st"><option>Active</option><option>Probation</option><option>On Leave</option></select></div>
           </div>
           <div class="frow">
-            <button class="btn btn-p" onclick="saveEmp()">Save Employee</button>
-            <button class="btn btn-s" onclick="clearEmpForm()">Clear</button>
+            <button class="btn btn-p" id="emp-save-btn" onclick="saveEmpOrEdit()">Save Employee</button>
+            <button class="btn btn-s" onclick="cancelEmpEdit()">Clear</button>
           </div>
         </div>
       </div>
@@ -1363,7 +1370,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
 
         <!-- Manual Payroll Entry -->
         <div class="card" style="margin-bottom:16px">
-          <div class="ch"><span class="ct">Manual Payroll Entry / Edit</span><span style="font-size:11px;color:var(--muted)">Formula auto-fills from Settings · all fields editable</span></div>
+          <div class="ch"><span class="ct" id="py-form-title">Manual Payroll Entry / Edit</span><span style="font-size:11px;color:var(--muted)">Formula auto-fills from Settings · all fields editable</span></div>
           <div class="cb">
             <div class="fg fg3" style="margin-bottom:13px">
               <div class="fgrp"><label>Employee</label><div id="py-em-pick" class="ls-wrap"></div><input type="hidden" id="py-em" onchange="applyFormula()"></div>
@@ -1420,9 +1427,11 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
               </div>
             </div>
             <div class="frow">
-              <button class="btn btn-p" onclick="savePay()">Save Record</button>
+              <button class="btn btn-p" id="py-save-btn" onclick="savePay()">Save Record</button>
+              <button class="btn btn-s" id="py-cancel-btn" onclick="clearPayForm()" style="display:none">✕ Cancel Edit</button>
               <button class="btn btn-s" onclick="clearPayForm()">Clear</button>
             </div>
+            <input type="hidden" id="py-edit-id">
           </div>
         </div>
 
@@ -1445,8 +1454,15 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
     <div id="sec-increment" class="section">
       <div class="g2" style="max-width:900px">
         <div class="card">
-          <div class="ch"><span class="ct">Salary Increment</span></div>
+          <div class="ch">
+            <span class="ct">Salary Increment / Promotion</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm" id="ic-mode-incr" onclick="setIncrMode('increment')" style="background:var(--accent);color:#fff">Increment</button>
+              <button class="btn btn-sm btn-s" id="ic-mode-prom" onclick="setIncrMode('promotion')">Promotion</button>
+            </div>
+          </div>
           <div class="cb">
+            <input type="hidden" id="ic-mode" value="increment">
             <div class="fg fg2">
               <div class="fgrp"><label>Employee</label><div id="ic-em-pick" class="ls-wrap"></div><input type="hidden" id="ic-em" onchange="fillIncrPrev()"></div>
               <div class="fgrp"><label>Effective Date</label><input type="date" id="ic-dt"></div>
@@ -1454,10 +1470,16 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
               <div class="fgrp"><label>New Salary (BDT)</label><input type="number" id="ic-new" oninput="calcIncr()" placeholder="0"></div>
               <div class="fgrp"><label>Increment Amount</label><input type="number" id="ic-amt" oninput="calcIncrFromAmt()" placeholder="0"></div>
               <div class="fgrp"><label>Increment %</label><input type="number" id="ic-pct" oninput="calcIncrFromPct()" placeholder="0"></div>
+              <!-- Promotion fields (hidden by default) -->
+              <div class="fgrp" id="ic-prom-from" style="display:none"><label>Current Designation</label><input type="text" id="ic-old-title" readonly style="background:#f0f0f0"></div>
+              <div class="fgrp" id="ic-prom-to" style="display:none">
+                <label>New Designation *</label>
+                <select id="ic-new-title"><option value="">Select Designation</option></select>
+              </div>
               <div class="fgrp s2"><label>Reason / Remarks</label><textarea id="ic-rsn" placeholder="Annual increment, promotion, etc."></textarea></div>
             </div>
             <div class="frow">
-              <button class="btn btn-p" onclick="saveIncr()">Apply Increment</button>
+              <button class="btn btn-p" id="ic-save-btn" onclick="saveIncr()">Apply Increment</button>
               <button class="btn btn-pr btn-sm" onclick="printIncrLetter()">🖨 Print Letter</button>
             </div>
           </div>
@@ -1468,8 +1490,8 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
         </div>
       </div>
       <div class="card" style="margin-top:16px;max-width:900px">
-        <div class="ch"><span class="ct">Increment History</span><button class="btn btn-sm btn-pr no-print" onclick="printReport('increment')">🖨 Print</button></div>
-        <table class="dt"><thead><tr><th>Employee</th><th>Dept</th><th>Date</th><th>Prev Salary</th><th>New Salary</th><th>Amount</th><th>%</th><th>Reason</th><th></th></tr></thead>
+        <div class="ch"><span class="ct">Increment / Promotion History</span><button class="btn btn-sm btn-pr no-print" onclick="printReport('increment')">🖨 Print</button></div>
+        <table class="dt"><thead><tr><th>Employee</th><th>Type</th><th>Dept</th><th>Date</th><th>Prev Salary</th><th>New Salary</th><th>Amount</th><th>%</th><th>Designation Change</th><th>Reason</th><th></th></tr></thead>
         <tbody id="ic-rows"></tbody></table>
       </div>
     </div>
@@ -1508,6 +1530,69 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
         </div>
         <table class="dt"><thead><tr><th>Employee</th><th>Dept</th><th>BU</th><th>Type</th><th>Last Day</th><th>Settlement</th><th>Clearance</th><th>Status</th><th></th></tr></thead>
         <tbody id="sp-react-rows"></tbody></table>
+      </div>
+    </div>
+
+    <!-- TRANSFER -->
+    <div id="sec-transfer" class="section">
+      <div class="g2" style="max-width:900px">
+        <div class="card">
+          <div class="ch"><span class="ct">Employee Transfer</span></div>
+          <div class="cb">
+            <div class="notice notice-i" style="margin-bottom:12px"><span>ℹ</span><div>Transfer moves an employee to a new BU / Department / Section. The employee record is updated immediately. A transfer history is kept for reference.</div></div>
+            <div class="fg fg2">
+              <div class="fgrp"><label>Employee *</label><div id="tr-em-pick" class="ls-wrap"></div><input type="hidden" id="tr-em" onchange="fillTransferFrom()"></div>
+              <div class="fgrp"><label>Transfer Date *</label><input type="date" id="tr-dt"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0">
+              <!-- FROM -->
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px">
+                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Current Position</div>
+                <div class="fg fg1">
+                  <div class="fgrp"><label>Business Unit</label><input id="tr-from-bu" readonly style="background:#f0f0f0"></div>
+                  <div class="fgrp"><label>Department</label><input id="tr-from-dept" readonly style="background:#f0f0f0"></div>
+                  <div class="fgrp"><label>Section</label><input id="tr-from-sec" readonly style="background:#f0f0f0"></div>
+                  <div class="fgrp"><label>Sub-section</label><input id="tr-from-sub" readonly style="background:#f0f0f0"></div>
+                  <div class="fgrp"><label>Designation</label><input id="tr-from-title" readonly style="background:#f0f0f0"></div>
+                </div>
+              </div>
+              <!-- TO -->
+              <div style="background:var(--as);border:1px solid var(--al);border-radius:8px;padding:14px">
+                <div style="font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Transfer To</div>
+                <div class="fg fg1">
+                  <div class="fgrp"><label>Business Unit *</label><select id="tr-to-bu" onchange="fillDeptSel('tr-to-dept');document.getElementById('tr-to-dept').value='';document.getElementById('tr-to-sec').innerHTML='<option value=\"\">Select Section</option>';document.getElementById('tr-to-sub').innerHTML='<option value=\"\">Select Sub-section</option>';"><option value="">Select BU</option></select></div>
+                  <div class="fgrp"><label>Department *</label><select id="tr-to-dept" onchange="fillSecSel('tr-to-sec','tr-to-dept');document.getElementById('tr-to-sec').value='';document.getElementById('tr-to-sub').innerHTML='<option value=\"\">Select Sub-section</option>';"><option value="">Select Dept</option></select></div>
+                  <div class="fgrp"><label>Section</label><select id="tr-to-sec" onchange="fillSubSel('tr-to-sub','tr-to-sec','tr-to-dept')"><option value="">Select Section</option></select></div>
+                  <div class="fgrp"><label>Sub-section</label><select id="tr-to-sub"><option value="">Select Sub-section</option></select></div>
+                  <div class="fgrp"><label>Designation</label><select id="tr-to-title"><option value="">Keep Current</option></select></div>
+                </div>
+              </div>
+            </div>
+            <div class="fgrp"><label>Transfer Type</label>
+              <select id="tr-type">
+                <option>Permanent Transfer</option>
+                <option>Temporary Transfer</option>
+                <option>Deputation</option>
+                <option>Secondment</option>
+                <option>Posting</option>
+              </select>
+            </div>
+            <div class="fgrp" style="margin-top:10px"><label>Remarks</label><textarea id="tr-rsn" placeholder="Reason for transfer, project name, etc."></textarea></div>
+            <div class="frow" style="margin-top:14px">
+              <button class="btn btn-p" onclick="saveTransfer()">Process Transfer</button>
+              <button class="btn btn-s" onclick="clearTransferForm()">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">Transfer Stats</span></div>
+          <div class="cb" id="tr-stats"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;max-width:900px">
+        <div class="ch"><span class="ct">Transfer History</span><button class="btn btn-sm btn-pr no-print" onclick="printReport('transfer')">🖨 Print</button></div>
+        <table class="dt"><thead><tr><th>Employee</th><th>Date</th><th>Type</th><th>From BU</th><th>From Dept</th><th>To BU</th><th>To Dept</th><th>Designation</th><th>Remarks</th><th></th></tr></thead>
+        <tbody id="tr-rows"></tbody></table>
       </div>
     </div>
 
@@ -1750,6 +1835,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
             <button class="btn btn-s" onclick="expCSV('payroll')">⬇ Payroll (Excel)</button>
             <button class="btn btn-s" onclick="expCSV('increment')">⬇ Increments (Excel)</button>
             <button class="btn btn-s" onclick="expCSV('separation')">⬇ Separations (Excel)</button>
+            <button class="btn btn-s" onclick="expCSV('transfer')">⬇ Transfers (Excel)</button>
             <button class="btn btn-s" onclick="expCSV('manpower')">⬇ Manpower (Excel)</button>
           </div>
           <div class="fsec" style="margin-top:18px">☁ Cloud &amp; Backup</div>
@@ -2433,54 +2519,6 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
 </div>
 
 <!-- EMPLOYEE EDIT MODAL -->
-<div class="modal-bg hidden" id="emp-edit-modal">
-  <div class="modal" style="max-width:640px">
-    <div class="mh"><span class="mt">✏ Edit Employee</span><button class="mc-btn" onclick="closeModal('emp-edit-modal')">✕</button></div>
-    <div class="mb">
-      <div id="emp-edit-eid-badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--il);border-radius:6px;font-family:var(--fm);font-size:13px;font-weight:700;color:var(--a2);margin-bottom:6px;letter-spacing:1px"></div>
-      <div style="font-size:10.5px;color:var(--muted);margin-bottom:14px">🔒 Employee ID cannot be changed</div>
-
-      <!-- Personal Info section -->
-      <div id="ee-sec-personal">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Personal Information</div>
-        <div class="fg fg3" id="ee-personal-fields">
-          <div class="fgrp ee-field" data-field="fn"><label>First Name *</label><input id="ee-fn"></div>
-          <div class="fgrp ee-field" data-field="ln"><label>Last Name *</label><input id="ee-ln"></div>
-          <div class="fgrp ee-field" data-field="gender"><label>Gender</label><select id="ee-gen"><option value="">—</option><option>Male</option><option>Female</option><option>Other</option></select></div>
-          <div class="fgrp ee-field" data-field="email"><label>Email</label><input type="email" id="ee-em"></div>
-          <div class="fgrp ee-field" data-field="phone"><label>Phone</label><input id="ee-ph"></div>
-          <div class="fgrp ee-field" data-field="dob"><label>Date of Birth</label><input type="date" id="ee-dob"></div>
-          <div class="fgrp ee-field" data-field="nid"><label>NID / Passport</label><input id="ee-nid"></div>
-          <div class="fgrp s2 ee-field" data-field="address"><label>Address</label><input id="ee-addr"></div>
-        </div>
-      </div>
-
-      <!-- Employment section -->
-      <div id="ee-sec-employment" style="margin-top:14px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Employment</div>
-        <div class="fg fg2" id="ee-employment-fields">
-          <div class="fgrp ee-field" data-field="title">
-            <label>Job Title / Designation</label>
-            <select id="ee-title-sel"><option value="">Select Designation</option></select>
-            <input id="ee-title" placeholder="Or type manually" style="margin-top:5px">
-            <div style="font-size:10px;color:var(--muted);margin-top:3px">Select from list or type a custom title</div>
-          </div>
-          <div class="fgrp ee-field" data-field="salary"><label>Gross Salary (BDT)</label><input type="number" id="ee-sal"></div>
-          <div class="fgrp ee-field" data-field="type"><label>Employee Type</label><select id="ee-type"><option>Permanent</option><option>Probationary</option><option>Contractual</option><option>Part-time</option><option>Daily-rated (Temporary)</option><option>Intern/Trainee</option><option>Expatriate</option></select></div>
-          <div class="fgrp ee-field" data-field="status"><label>Status</label><select id="ee-st"><option>Active</option><option>Probation</option><option>On Leave</option><option>Terminated</option></select></div>
-        </div>
-      </div>
-
-      <input type="hidden" id="ee-id">
-      <div id="emp-edit-window-warn" style="display:none;background:#fff3cd;border-radius:7px;padding:9px 13px;font-size:11.5px;color:#856404;margin-top:12px;margin-bottom:4px"></div>
-      <div id="emp-edit-field-warn" style="display:none;background:var(--il);border-radius:7px;padding:9px 13px;font-size:11.5px;color:var(--info);margin-top:8px;margin-bottom:4px"></div>
-      <div class="frow" style="margin-top:14px">
-        <button class="btn btn-p" onclick="saveEmpEdit()">Save Changes</button>
-        <button class="btn btn-s" onclick="closeModal('emp-edit-modal')">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- REACTIVATE EMPLOYEE MODAL -->
 <div class="modal-bg hidden" id="reactivate-modal">
@@ -2769,6 +2807,7 @@ const DB = (function () {
     payroll: 'payroll',
     increments: 'increments',
     separations: 'separations',
+    transfers: 'transfers',
   };
 
   function _headers() {
@@ -2866,7 +2905,7 @@ const DB = (function () {
       await _rest('POST', 'attendance', [{ id: row.id, emp_id: row.empId, date: row.date, data: row, updated_at: updated.updated_at }]);
     } else if (table === 'payroll') {
       await _rest('POST', 'payroll', [{ id: row.id, emp_id: row.empId, month: row.month, data: row, updated_at: updated.updated_at }]);
-    } else if (['leaves', 'increments', 'separations'].includes(table)) {
+    } else if (['leaves', 'increments', 'separations', 'transfers'].includes(table)) {
       await _rest('POST', table, [{ id: row.id, emp_id: row.empId, data: row, updated_at: updated.updated_at }]);
     } else if (table === 'employees') {
       await _rest('POST', 'employees', [{ id: row.id, data: row, updated_at: updated.updated_at }]);
@@ -3140,6 +3179,7 @@ const MODULES=[
   {id:'payroll',lbl:'Payroll & Payslip',icon:'৳',sec:'Data Entry'},
   {id:'increment',lbl:'Increment',icon:'↑',sec:'Data Entry'},
   {id:'separation',lbl:'Separation',icon:'↗',sec:'Data Entry'},
+  {id:'transfer',lbl:'Transfer',icon:'⇄',sec:'Data Entry'},
   {id:'employees',lbl:'Employees',icon:'☰',sec:'Records'},
   {id:'manpower',lbl:'Dept Manpower',icon:'▤',sec:'Records'},
   {id:'bu-report',lbl:'BU Report',icon:'⊞',sec:'Records'},
@@ -3182,12 +3222,13 @@ function nav(page){
 
 function refresh(p){
   if(p==='dashboard')renderDash();
-  if(p==='add-employee'){fillBuSel('e-bu');fillDesigSel();fillShiftSel();document.getElementById('e-join').value=today();}
+  if(p==='add-employee'){fillBuSel('e-bu');fillDesigSel('e-title');fillShiftSel();document.getElementById('e-join').value=today();}
   if(p==='attendance'){fillEmpSel('at-em');document.getElementById('at-dt').value=today();_fillAttFilters();renderAttLog();renderAttToday();}
   if(p==='leave'){fillEmpSel('lv-em');renderLvRows();renderLvBal();}
   if(p==='payroll'){fillEmpSel('py-em');renderPayRows();document.getElementById('py-mo').value=moStr();_initPyRowMonthFilter();_initPyProcPicker();}
-  if(p==='increment'){fillEmpSel('ic-em');renderIncrRows();renderIncrSum();}
+  if(p==='increment'){fillEmpSel('ic-em');fillDesigSel('ic-new-title');renderIncrRows();renderIncrSum();}
   if(p==='separation'){fillEmpSel('sp-em',true);renderSepRows();renderSepStats();}
+  if(p==='transfer'){fillEmpSel('tr-em');fillBuSel('tr-to-bu');fillDesigSel('tr-to-title',true);renderTransferRows();renderTransferStats();document.getElementById('tr-dt').value=today();}
   if(p==='employees'){renderEmpTbl();fillBuFilt();}
   if(p==='manpower')renderManpower();
   if(p==='bu-report')renderBUReport();
@@ -3589,6 +3630,7 @@ function openProfile(id){
   const lvs=DB.g('leaves').filter(l=>l.empId===id);
   const prs=DB.g('payroll').filter(p=>p.empId===id);
   const incs=DB.g('increments').filter(i=>i.empId===id);
+  const trs=DB.g('transfers').filter(t=>t.empId===id);
   const present=att.filter(a=>['Present','Late','Half Day','Early Out','Late & Early Out'].includes(a.status)).length;
   document.getElementById('prof-body').innerHTML=`
     <div class="profile-top">
@@ -3609,6 +3651,7 @@ function openProfile(id){
       <div class="p-item"><div class="p-lbl">Join Date</div><div class="p-val">${e.join||'—'}</div></div>
       <div class="p-item"><div class="p-lbl">Gross Salary</div><div class="p-val">${e.salary?'৳'+N(e.salary):'—'}</div></div>
       <div class="p-item"><div class="p-lbl">Last Increment</div><div class="p-val">${incs.length?'৳'+N(incs[incs.length-1].newSal):'—'}</div></div>
+      <div class="p-item"><div class="p-lbl">Last Transfer</div><div class="p-val">${trs.length?trs[trs.length-1].toDept+' ('+trs[trs.length-1].date+')':'—'}</div></div>
     </div>
     <div class="krow">
       <div class="kpi"><div class="kpi-v" style="color:var(--a2)">${present}</div><div class="kpi-l">Present</div></div>
@@ -3619,115 +3662,123 @@ function openProfile(id){
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
       <button class="btn btn-pr btn-sm no-print" onclick="printEmpProfile('${id}')">🖨 Print Profile</button>
-      ${canEditEmployee(e)?`<button class="btn btn-p btn-sm" onclick="openEmpEdit('${id}')">✏ Edit</button>${editWindowLabel(e)?'<span style="font-size:10.5px;color:var(--info);align-self:center">⏱ '+editWindowLabel(e)+'</span>':''}`:`<button class="btn btn-s btn-sm" disabled style="opacity:.5" title="No edit access or window closed">✏ Edit Locked</button>`}
+      ${currentUser?.app_role==='hr_admin'?`<button class="btn btn-p btn-sm" onclick="openEmpEdit('${id}')">✏ Edit Employee</button>`:''}
     </div>`;
   document.getElementById('prof-modal').classList.remove('hidden');
 }
 function closeModal(id){document.getElementById(id).classList.add('hidden');}
 
 // ══════════════════════════════════════════
-//  EMPLOYEE EDIT MODAL
+//  EMPLOYEE EDIT — uses Add Employee form
 // ══════════════════════════════════════════
 function openEmpEdit(id){
+  if(currentUser?.app_role!=='hr_admin'){toast('🔒 Admin access required');return;}
   const e=DB.g('employees').find(x=>x.id===id);
   if(!e){toast('Employee not found');return;}
-  if(!canEditEmployee(e)){toast('Edit access denied or window closed');return;}
-  document.getElementById('ee-id').value=id;
-  document.getElementById('emp-edit-eid-badge').textContent=e.eid||'—';
-  document.getElementById('ee-fn').value=e.fn||'';
-  document.getElementById('ee-ln').value=e.ln||'';
-  document.getElementById('ee-em').value=e.email||'';
-  document.getElementById('ee-ph').value=e.phone||'';
-  document.getElementById('ee-dob').value=e.dob||'';
-  document.getElementById('ee-nid').value=e.nid||'';
-  document.getElementById('ee-addr').value=e.address||'';
-  document.getElementById('ee-gen').value=e.gender||'';
-  document.getElementById('ee-sal').value=e.salary||'';
-  document.getElementById('ee-type').value=e.type||'Full-time';
-  document.getElementById('ee-st').value=e.status||'Active';
 
-  // Fill designation dropdown from designations list
-  const desigs=DB.g('desigs')||[];
-  const desSel=document.getElementById('ee-title-sel');
-  if(desSel){
-    desSel.innerHTML='<option value="">Select Designation</option>'+desigs.map(d=>`<option value="${d}" ${d===e.title?'selected':''}>${d}</option>`).join('');
-    // If current title isn't in list, show it in manual input
-    const inList=desigs.includes(e.title||'');
-    document.getElementById('ee-title').value=inList?'':(e.title||'');
-    desSel.onchange=()=>{if(desSel.value)document.getElementById('ee-title').value='';};
-  }
-
-  // Field visibility based on permissions
-  const allowedFields=getEditableFields(e);
-  const allFields=document.querySelectorAll('#emp-edit-modal .ee-field');
-  let hiddenCount=0;
-  allFields.forEach(el=>{
-    const fid=el.dataset.field;
-    const allowed=currentUser.app_role==='hr_admin'||allowedFields.includes(fid);
-    el.style.display=allowed?'':'none';
-    if(!allowed)hiddenCount++;
-    // Disable inputs in fields not allowed
-    el.querySelectorAll('input,select,textarea').forEach(inp=>inp.disabled=!allowed);
-  });
-
-  // Window warning
-  const warn=document.getElementById('emp-edit-window-warn');
-  const lbl=editWindowLabel(e);
-  if(lbl&&warn){warn.textContent='⏱ '+lbl;warn.style.display='block';}
-  else if(warn){warn.style.display='none';}
-
-  // Field restriction notice
-  const fwarn=document.getElementById('emp-edit-field-warn');
-  if(fwarn){
-    if(hiddenCount>0&&currentUser.app_role!=='hr_admin'){
-      fwarn.textContent=`🔒 ${hiddenCount} field(s) are restricted for your role. Contact HR Admin to update them.`;
-      fwarn.style.display='block';
-    }else{
-      fwarn.style.display='none';
-    }
-  }
-
+  // Navigate to Add Employee section
   closeModal('prof-modal');
-  document.getElementById('emp-edit-modal').classList.remove('hidden');
+  nav('add-employee');
+
+  // Set edit mode
+  document.getElementById('e-edit-id').value=id;
+  document.getElementById('add-emp-title').textContent='Edit Employee';
+  document.getElementById('emp-save-btn').textContent='Update Employee';
+  const badge=document.getElementById('edit-emp-badge');
+  badge.style.display='flex';
+  document.getElementById('edit-emp-eid').textContent=e.eid||'—';
+  document.getElementById('e-eid-preview').textContent=e.eid||'—';
+
+  // Fill photo
+  if(e.photo){
+    photoB64=e.photo;
+    document.getElementById('photo-prev').innerHTML=`<img src="${e.photo}">`;
+  } else {
+    photoB64='';
+    document.getElementById('photo-prev').innerHTML='<span style="font-size:20px">📷</span><span style="font-size:9.5px;color:var(--muted)">Upload</span>';
+  }
+
+  // Personal info
+  document.getElementById('e-fn').value=e.fn||'';
+  document.getElementById('e-ln').value=e.ln||'';
+  document.getElementById('e-gen').value=e.gender||'';
+  document.getElementById('e-dob').value=e.dob||'';
+  document.getElementById('e-em').value=e.email||'';
+  document.getElementById('e-ph').value=e.phone||'';
+  document.getElementById('e-nid').value=e.nid||'';
+  document.getElementById('e-addr').value=e.address||'';
+
+  // Employment — BU first, then cascade dept/section/subsection
+  fillBuSel('e-bu');
+  document.getElementById('e-bu').value=e.bu||'';
+  fillDeptSel('e-dept');
+  document.getElementById('e-dept').value=e.dept||'';
+  fillSecSel('e-sec','e-dept');
+  document.getElementById('e-sec').value=e.section||'';
+  fillSubSel('e-sub','e-sec','e-dept');
+  document.getElementById('e-sub').value=e.subsection||'';
+
+  fillDesigSel();
+  document.getElementById('e-title').value=e.title||'';
+  fillShiftSel();
+  document.getElementById('e-shift').value=e.shift||'';
+  document.getElementById('e-type').value=e.type||'Permanent';
+  document.getElementById('e-join').value=e.join||'';
+  document.getElementById('e-sal').value=e.salary||'';
+  document.getElementById('e-st').value=e.status||'Active';
+
+  // Scroll to top
+  document.querySelector('.content').scrollTop=0;
 }
 
-function saveEmpEdit(){
-  const id=document.getElementById('ee-id').value;
-  if(!id)return;
-  const emps=DB.g('employees');
-  const emp=emps.find(x=>x.id===id);
-  if(!emp){toast('Employee not found');return;}
-  if(!canEditEmployee(emp)){toast('Edit window has closed');return;}
-  const fn=document.getElementById('ee-fn').value.trim();
-  const ln=document.getElementById('ee-ln').value.trim();
-  if(!fn||!ln){toast('First and Last name required');return;}
-  const allowedFields=getEditableFields(emp);
-  const isAdmin=currentUser?.app_role==='hr_admin';
-  // Only update fields the user is allowed to touch
-  const can=f=>isAdmin||allowedFields.includes(f);
-  if(can('fn'))emp.fn=fn;
-  if(can('ln'))emp.ln=ln;
-  if(can('email'))emp.email=document.getElementById('ee-em').value;
-  if(can('phone'))emp.phone=document.getElementById('ee-ph').value;
-  if(can('dob'))emp.dob=document.getElementById('ee-dob').value;
-  if(can('nid'))emp.nid=document.getElementById('ee-nid').value;
-  if(can('address'))emp.address=document.getElementById('ee-addr').value;
-  if(can('gender'))emp.gender=document.getElementById('ee-gen').value;
-  if(can('title')){
-    // Designation: prefer dropdown selection, fall back to manual text
-    const selVal=document.getElementById('ee-title-sel')?.value||'';
-    const manVal=document.getElementById('ee-title').value.trim();
-    emp.title=selVal||manVal;
+function saveEmpOrEdit(){
+  const editId=document.getElementById('e-edit-id').value;
+  if(editId){
+    // UPDATE existing employee
+    if(currentUser?.app_role!=='hr_admin'){toast('🔒 Admin access required');return;}
+    const emps=DB.g('employees');
+    const emp=emps.find(x=>x.id===editId);
+    if(!emp){toast('Employee not found');return;}
+    const fn=document.getElementById('e-fn').value.trim();
+    const ln=document.getElementById('e-ln').value.trim();
+    if(!fn||!ln){toast('First and Last name required');return;}
+    emp.fn=fn;
+    emp.ln=ln;
+    emp.gender=document.getElementById('e-gen').value;
+    emp.dob=document.getElementById('e-dob').value;
+    emp.email=document.getElementById('e-em').value;
+    emp.phone=document.getElementById('e-ph').value;
+    emp.nid=document.getElementById('e-nid').value;
+    emp.address=document.getElementById('e-addr').value;
+    emp.bu=document.getElementById('e-bu').value;
+    emp.dept=document.getElementById('e-dept').value;
+    emp.section=document.getElementById('e-sec').value;
+    emp.subsection=document.getElementById('e-sub').value;
+    emp.title=document.getElementById('e-title').value;
+    emp.shift=document.getElementById('e-shift').value;
+    emp.type=document.getElementById('e-type').value;
+    emp.join=document.getElementById('e-join').value;
+    emp.salary=document.getElementById('e-sal').value;
+    emp.status=document.getElementById('e-st').value;
+    if(photoB64)emp.photo=photoB64;
+    emp.lastEditedAt=Date.now();
+    emp.lastEditedBy=currentUser?.name||currentUser?.email||'unknown';
+    DB.s('employees',emps);
+    renderEmpTbl();
+    toast(`✓ ${emp.fn} ${emp.ln} updated`);
+    cancelEmpEdit();
+  } else {
+    // ADD new employee
+    saveEmp();
   }
-  if(can('salary'))emp.salary=document.getElementById('ee-sal').value;
-  if(can('type'))emp.type=document.getElementById('ee-type').value;
-  if(can('status'))emp.status=document.getElementById('ee-st').value;
-  emp.lastEditedAt=Date.now();
-  emp.lastEditedBy=currentUser?.name||currentUser?.email||'unknown';
-  DB.s('employees',emps);
-  closeModal('emp-edit-modal');
-  renderEmpTbl();
-  toast(`✓ ${emp.fn} ${emp.ln} updated`);
+}
+
+function cancelEmpEdit(){
+  document.getElementById('e-edit-id').value='';
+  document.getElementById('add-emp-title').textContent='New Employee';
+  document.getElementById('emp-save-btn').textContent='Save Employee';
+  document.getElementById('edit-emp-badge').style.display='none';
+  clearEmpForm();
 }
 
 // ══════════════════════════════════════════
@@ -4261,8 +4312,21 @@ function savePay(){
   const earn=gp+extras;
   const net=Math.max(0,earn-ded);
   const pr=DB.g('payroll');
-  pr.push({id:DB.id(),empId,month:v('py-mo'),gross:gr,grossPayable:gp,basic,hra,ta,ma,sa,bonus:bn,tiff,nightPay:night,weekendPay:wknd,holidayPay:hol,pf,tax:tx,absent:abd,gratuity,earn,ded,net,method:v('py-meth'),status:v('py-st'),notes:v('py-no'),created:Date.now()});
-  DB.s('payroll',pr);renderPayRows();toast(`✓ Net ৳${N(net)} (Payable ৳${N(gp)} from fixed ৳${N(gr)})`);
+  const editId=document.getElementById('py-edit-id')?.value||'';
+  if(editId){
+    // UPDATE existing record
+    const rec=pr.find(x=>x.id===editId);
+    if(!rec){toast('Record not found');return;}
+    Object.assign(rec,{gross:gr,grossPayable:gp,basic,hra,ta,ma,sa,bonus:bn,tiff,nightPay:night,weekendPay:wknd,holidayPay:hol,pf,tax:tx,absent:abd,gratuity,earn,ded,net,method:v('py-meth'),status:v('py-st'),notes:v('py-no'),updatedAt:Date.now()});
+    DB.s('payroll',pr);renderPayRows();_initPyRowMonthFilter();
+    toast(`✓ Record updated — Net ৳${N(net)}`);
+    clearPayForm();
+  } else {
+    // NEW record
+    pr.push({id:DB.id(),empId,month:v('py-mo'),gross:gr,grossPayable:gp,basic,hra,ta,ma,sa,bonus:bn,tiff,nightPay:night,weekendPay:wknd,holidayPay:hol,pf,tax:tx,absent:abd,gratuity,earn,ded,net,method:v('py-meth'),status:v('py-st'),notes:v('py-no'),created:Date.now()});
+    DB.s('payroll',pr);renderPayRows();_initPyRowMonthFilter();
+    toast(`✓ Net ৳${N(net)} (Payable ৳${N(gp)} from fixed ৳${N(gr)})`);
+  }
 }
 function renderPayRows(){
   const q=(document.getElementById('py-srch')?.value||'').toLowerCase();
@@ -4286,7 +4350,7 @@ function renderPayRows(){
       <td class="mono" style="font-weight:700;color:var(--accent)">৳${N(p.net)}</td>
       <td style="font-size:11.5px">${p.method||'—'}</td>
       <td>${pyB(p.status)}</td>
-      <td><div style='display:flex;gap:4px'><button class="btn btn-t btn-xs" onclick="genPayslip('${p.id}')">📄</button><button class="btn btn-d btn-xs" onclick="delPay('${p.id}')">✕</button></div></td>
+      <td><div style='display:flex;gap:4px'><button class="btn btn-t btn-xs" onclick="genPayslip('${p.id}')">📄</button><button class="btn btn-sm btn-s btn-xs" onclick="editPayRow('${p.id}')">✏</button><button class="btn btn-d btn-xs" onclick="delPay('${p.id}')">✕</button></div></td>
     </tr>`}).join(''):'<tr><td colspan="11"><div class="empty">No records</div></td></tr>';
 }
 
@@ -4295,7 +4359,55 @@ function _initPyRowMonthFilter(){
   const mos=[...new Set(DB.g('payroll').map(p=>p.month).filter(Boolean))].sort().reverse();
   sel.innerHTML='<option value="">All Months</option>'+mos.map(m=>`<option value="${m}">${m}</option>`).join('');
 }
-function clearPayForm(){['py-gr','py-gp','py-basic','py-hra','py-ta','py-ma','py-sa','py-bn','py-wknd','py-hol','py-pf','py-tx','py-abd','py-no'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('py-net').textContent='৳ 0';const gpEl=document.getElementById('pf-gp');if(gpEl)gpEl.textContent='';}
+function editPayRow(id){
+  const p=DB.g('payroll').find(x=>x.id===id);if(!p)return;
+  const emp=DB.g('employees').find(e=>e.id===p.empId);
+  // Set edit-mode flag
+  document.getElementById('py-edit-id').value=id;
+  document.getElementById('py-form-title').textContent='✏ Editing Payroll Record';
+  document.getElementById('py-save-btn').textContent='Update Record';
+  document.getElementById('py-cancel-btn').style.display='';
+  // Fill employee + month (read-only in edit)
+  const emSel=document.getElementById('py-em');
+  if(emSel){emSel.value=p.empId;}
+  document.getElementById('py-mo').value=p.month||'';
+  document.getElementById('py-gr').value=p.gross||0;
+  document.getElementById('py-gp').value=p.grossPayable||p.gross||0;
+  document.getElementById('py-basic').value=p.basic||0;
+  document.getElementById('py-hra').value=p.hra||0;
+  document.getElementById('py-ta').value=p.ta||0;
+  document.getElementById('py-ma').value=p.ma||0;
+  document.getElementById('py-sa').value=p.sa||0;
+  document.getElementById('py-bn').value=p.bonus||0;
+  const tiffEl=document.getElementById('py-tiff');if(tiffEl)tiffEl.value=p.tiff||0;
+  const nightEl=document.getElementById('py-night');if(nightEl)nightEl.value=p.nightPay||0;
+  const wkndEl=document.getElementById('py-wknd');if(wkndEl)wkndEl.value=p.weekendPay||0;
+  const holEl=document.getElementById('py-hol');if(holEl)holEl.value=p.holidayPay||0;
+  document.getElementById('py-pf').value=p.pf||0;
+  document.getElementById('py-tx').value=p.tax||0;
+  const gratuityEl=document.getElementById('py-gratuity');if(gratuityEl)gratuityEl.value=p.gratuity||0;
+  document.getElementById('py-abd').value=p.absent||0;
+  document.getElementById('py-meth').value=p.method||'Bank Transfer (EFT)';
+  document.getElementById('py-st').value=p.status||'Paid';
+  document.getElementById('py-no').value=p.notes||'';
+  calcNet();
+  // Scroll to payroll form
+  document.querySelector('.content').scrollTop=0;
+  toast(`✏ Editing ${emp?emp.fn+' '+emp.ln:''} — ${p.month}`);
+}
+
+function clearPayForm(){
+  document.getElementById('py-edit-id').value='';
+  document.getElementById('py-form-title').textContent='Manual Payroll Entry / Edit';
+  document.getElementById('py-save-btn').textContent='Save Record';
+  document.getElementById('py-cancel-btn').style.display='none';
+  ['py-gr','py-gp','py-basic','py-hra','py-ta','py-ma','py-sa','py-bn','py-wknd','py-hol','py-pf','py-tx','py-abd','py-no'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const tiffEl=document.getElementById('py-tiff');if(tiffEl)tiffEl.value='';
+  const nightEl=document.getElementById('py-night');if(nightEl)nightEl.value='';
+  const gratuityEl=document.getElementById('py-gratuity');if(gratuityEl)gratuityEl.value='';
+  document.getElementById('py-net').textContent='৳ 0';
+  const gpEl=document.getElementById('pf-gp');if(gpEl)gpEl.textContent='';
+}
 function delPay(id){
   try{requireAuth(false);}catch(e){return;}DB.s('payroll',DB.g('payroll').filter(p=>p.id!==id));renderPayRows();}
 
@@ -4414,9 +4526,23 @@ function processPayroll(isReprocess){
 // ══════════════════════════════════════════
 //  INCREMENT
 // ══════════════════════════════════════════
+function setIncrMode(mode){
+  document.getElementById('ic-mode').value=mode;
+  const isPromo=mode==='promotion';
+  document.getElementById('ic-mode-incr').className=isPromo?'btn btn-sm btn-s':'btn btn-sm';
+  document.getElementById('ic-mode-incr').style.background=isPromo?'':'var(--accent)';
+  document.getElementById('ic-mode-incr').style.color=isPromo?'':'#fff';
+  document.getElementById('ic-mode-prom').className=isPromo?'btn btn-sm':'btn btn-sm btn-s';
+  document.getElementById('ic-mode-prom').style.background=isPromo?'var(--accent2)':'';
+  document.getElementById('ic-mode-prom').style.color=isPromo?'#fff':'';
+  document.getElementById('ic-prom-from').style.display=isPromo?'':'none';
+  document.getElementById('ic-prom-to').style.display=isPromo?'':'none';
+  document.getElementById('ic-save-btn').textContent=isPromo?'Apply Promotion':'Apply Increment';
+}
 function fillIncrPrev(){
   const empId=v('ic-em');const emp=DB.g('employees').find(e=>e.id===empId);
   if(emp&&emp.salary){document.getElementById('ic-prev').value=emp.salary;document.getElementById('ic-new').value=emp.salary;}
+  if(emp)document.getElementById('ic-old-title').value=emp.title||'—';
   calcIncr();
 }
 function calcIncr(){
@@ -4438,42 +4564,85 @@ function calcIncrFromPct(){
 function saveIncr(){
   try{requireAuth(false);}catch(e){return;}
   const empId=v('ic-em');if(!empId){toast('Select employee');return;}
+  const mode=v('ic-mode')||'increment';
   const prev=parseFloat(v('ic-prev'))||0,nw=parseFloat(v('ic-new'))||0;
   if(nw<=0){toast('Enter new salary');return;}
   const amt=nw-prev,pct=prev>0?parseFloat(((amt/prev)*100).toFixed(2)):0;
-  const incs=DB.g('increments');
-  incs.push({id:DB.id(),empId,prevSal:prev,newSal:nw,amount:amt,pct,date:v('ic-dt')||today(),reason:v('ic-rsn'),by:currentUser?.name||'Admin',created:Date.now()});
-  DB.s('increments',incs);
-  // Update employee salary
   const emps=DB.g('employees');const emp=emps.find(e=>e.id===empId);
-  if(emp){emp.salary=nw;DB.s('employees',emps);}
+  if(!emp)return;
+
+  // Handle promotion designation change
+  let oldTitle=emp.title||'';
+  let newTitle=oldTitle;
+  if(mode==='promotion'){
+    const sel=document.getElementById('ic-new-title');
+    if(sel&&sel.value){newTitle=sel.value;}
+    else{toast('Select new designation for promotion');return;}
+    emp.title=newTitle;
+  }
+
+  const incs=DB.g('increments');
+  incs.push({id:DB.id(),empId,type:mode,prevSal:prev,newSal:nw,amount:amt,pct,
+    prevTitle:mode==='promotion'?oldTitle:'',newTitle:mode==='promotion'?newTitle:'',
+    date:v('ic-dt')||today(),reason:v('ic-rsn'),by:currentUser?.name||'Admin',created:Date.now()});
+  DB.s('increments',incs);
+
+  // Update employee salary (always)
+  emp.salary=nw;
+  DB.s('employees',emps);
+
+  // Update payroll records from effective date onwards
+  const effectiveDate=v('ic-dt')||today();
+  const effectiveMo=effectiveDate.substring(0,7); // YYYY-MM
+  const payrolls=DB.g('payroll');
+  let pyUpdated=0;
+  payrolls.filter(p=>p.empId===empId&&p.month>=effectiveMo).forEach(p=>{
+    p.gross=nw;
+    // Recalc net proportionally
+    const diff=nw-prev;
+    p.grossPayable=(p.grossPayable||p.gross)+diff;
+    p.earn=(p.earn||0)+diff;
+    p.net=Math.max(0,(p.net||0)+diff);
+    pyUpdated++;
+  });
+  if(pyUpdated>0)DB.s('payroll',payrolls);
+
   renderIncrRows();renderIncrSum();
-  toast(`✓ Increment applied: ৳${N(amt)} (${pct}%)`);
+  const msg=mode==='promotion'
+    ?`✓ Promotion applied: ${oldTitle} → ${newTitle}, Salary ৳${N(nw)}${pyUpdated?` · ${pyUpdated} payroll record(s) updated`:''}`
+    :`✓ Increment applied: ৳${N(amt)} (${pct}%)${pyUpdated?` · ${pyUpdated} payroll record(s) updated`:''}`;
+  toast(msg,5000);
 }
 function renderIncrRows(){
   const incs=[...DB.g('increments')].sort((a,b)=>b.created-a.created);
   document.getElementById('ic-rows').innerHTML=incs.length?incs.map(ic=>{
     const e=DB.g('employees').find(x=>x.id===ic.empId)||{};
+    const isPromo=ic.type==='promotion';
+    const typeBadge=isPromo?`<span class="badge" style="background:#e8f0fe;color:#3a4db7;font-size:9px">🎖 Promotion</span>`:`<span class="badge b-g" style="font-size:9px">↑ Increment</span>`;
+    const desgChange=isPromo&&ic.prevTitle?`<span style="font-size:11px">${ic.prevTitle} → <strong>${ic.newTitle}</strong></span>`:'—';
     return `<tr>
       <td><div class="emc"><div class="av">${e.photo?`<img src="${e.photo}">`:ini(e.fn,e.ln)}</div>
       <div><div class="en">${e.fn||'?'} ${e.ln||''}</div></div></div></td>
+      <td>${typeBadge}</td>
       <td style="font-size:11.5px">${e.dept||'—'}</td>
       <td class="mono">${ic.date}</td>
       <td class="mono">৳${N(ic.prevSal)}</td>
       <td class="mono" style="font-weight:600">৳${N(ic.newSal)}</td>
       <td class="mono" style="color:var(--a2)">+৳${N(ic.amount)}</td>
       <td><span class="badge b-g">+${ic.pct}%</span></td>
+      <td>${desgChange}</td>
       <td style="font-size:11.5px;color:var(--muted)">${ic.reason||''}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-pr btn-xs" onclick="printIncrLetterById('${ic.id}')">🖨</button>
         <button class="btn btn-d btn-xs" onclick="delIncr('${ic.id}')">✕</button>
       </div></td>
-    </tr>`}).join(''):'<tr><td colspan="9"><div class="empty">No increments</div></td></tr>';
+    </tr>`}).join(''):'<tr><td colspan="11"><div class="empty">No records</div></td></tr>';
 }
 function renderIncrSum(){
   const incs=DB.g('increments');
   const total=incs.reduce((s,i)=>s+(i.amount||0),0);
   const avgPct=incs.length?parseFloat((incs.reduce((s,i)=>s+(i.pct||0),0)/incs.length).toFixed(2)):0;
+  const promos=incs.filter(i=>i.type==='promotion').length;
   document.getElementById('ic-sum').innerHTML=`
     <div style="text-align:center;padding:12px 0">
       <div style="font-family:var(--fh);font-size:28px;font-weight:700;color:var(--a2)">৳${N(total)}</div>
@@ -4487,6 +4656,10 @@ function renderIncrSum(){
       <div style="flex:1;text-align:center;background:var(--bg);border-radius:7px;padding:10px;border:1px solid var(--border)">
         <div style="font-family:var(--fh);font-weight:700;font-size:18px">${avgPct}%</div>
         <div style="font-size:10px;color:var(--muted)">Avg Increment</div>
+      </div>
+      <div style="flex:1;text-align:center;background:var(--bg);border-radius:7px;padding:10px;border:1px solid var(--border)">
+        <div style="font-family:var(--fh);font-weight:700;font-size:18px;color:var(--accent2)">${promos}</div>
+        <div style="font-size:10px;color:var(--muted)">Promotions</div>
       </div>
     </div>`;
 }
@@ -4570,6 +4743,101 @@ function renderSepStats(){
 }
 function delSep(id){
   try{requireAuth(false);}catch(e){return;}DB.s('separations',DB.g('separations').filter(s=>s.id!==id));renderSepRows();renderSepStats();}
+
+// ══════════════════════════════════════════
+//  TRANSFER
+// ══════════════════════════════════════════
+function fillTransferFrom(){
+  const empId=v('tr-em');
+  const emp=DB.g('employees').find(e=>e.id===empId);
+  if(!emp)return;
+  document.getElementById('tr-from-bu').value=emp.bu||'';
+  document.getElementById('tr-from-dept').value=emp.dept||'';
+  document.getElementById('tr-from-sec').value=emp.section||'';
+  document.getElementById('tr-from-sub').value=emp.subsection||'';
+  document.getElementById('tr-from-title').value=emp.title||'';
+}
+function clearTransferForm(){
+  ['tr-from-bu','tr-from-dept','tr-from-sec','tr-from-sub','tr-from-title','tr-rsn'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['tr-to-bu','tr-to-dept','tr-to-sec','tr-to-sub','tr-to-title'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
+}
+function saveTransfer(){
+  try{requireAuth(false);}catch(e){return;}
+  const empId=v('tr-em');if(!empId){toast('Select employee');return;}
+  const toBU=v('tr-to-bu');const toDept=v('tr-to-dept');
+  if(!toBU||!toDept){toast('Select destination BU and Department');return;}
+  const date=v('tr-dt')||today();
+  const emps=DB.g('employees');
+  const emp=emps.find(e=>e.id===empId);if(!emp){toast('Employee not found');return;}
+
+  // Snapshot current position
+  const fromBU=emp.bu||'';const fromDept=emp.dept||'';
+  const fromSec=emp.section||'';const fromSub=emp.subsection||'';
+  const fromTitle=emp.title||'';
+
+  const toSec=v('tr-to-sec')||'';const toSub=v('tr-to-sub')||'';
+  const toTitle=v('tr-to-title')||'';
+  const trType=v('tr-type')||'Permanent Transfer';
+  const rsn=v('tr-rsn')||'';
+
+  // Save transfer record
+  const transfers=DB.g('transfers');
+  transfers.push({id:DB.id(),empId,date,type:trType,
+    fromBU,fromDept,fromSec,fromSub,fromTitle,
+    toBU,toDept,toSec,toSub,toTitle:toTitle||fromTitle,
+    reason:rsn,by:currentUser?.name||'Admin',created:Date.now()});
+  DB.s('transfers',transfers);
+
+  // Update employee record
+  emp.bu=toBU;emp.dept=toDept;emp.section=toSec;emp.subsection=toSub;
+  if(toTitle)emp.title=toTitle;
+  emp.lastTransferDate=date;
+  DB.s('employees',emps);
+
+  renderTransferRows();renderTransferStats();renderEmpTbl();
+  clearTransferForm();
+  toast(`✓ ${emp.fn} ${emp.ln} transferred: ${fromDept}→${toDept} effective ${date}`,5000);
+}
+function renderTransferRows(){
+  const trs=[...DB.g('transfers')].sort((a,b)=>b.created-a.created);
+  const tbody=document.getElementById('tr-rows');if(!tbody)return;
+  tbody.innerHTML=trs.length?trs.map(t=>{
+    const e=DB.g('employees').find(x=>x.id===t.empId)||{};
+    return `<tr>
+      <td><div class="emc"><div class="av">${e.photo?`<img src="${e.photo}">`:ini(e.fn,e.ln)}</div>
+        <div><div class="en">${e.fn||'?'} ${e.ln||''}</div><div class="eid">${e.eid||''}</div></div></div></td>
+      <td class="mono">${t.date}</td>
+      <td><span class="badge b-b" style="font-size:9.5px">${t.type}</span></td>
+      <td style="font-size:11.5px">${t.fromBU||'—'}</td>
+      <td style="font-size:11.5px">${t.fromDept||'—'}${t.fromSec?' › '+t.fromSec:''}</td>
+      <td style="font-size:11.5px;color:var(--accent2);font-weight:600">${t.toBU||'—'}</td>
+      <td style="font-size:11.5px;color:var(--accent2);font-weight:600">${t.toDept||'—'}${t.toSec?' › '+t.toSec:''}</td>
+      <td style="font-size:11.5px">${t.toTitle!==t.fromTitle&&t.toTitle?`<span style="color:var(--accent2)">${t.toTitle}</span>`:(t.fromTitle||'—')}</td>
+      <td style="font-size:11.5px;color:var(--muted)">${t.reason||''}</td>
+      <td><button class="btn btn-d btn-xs" onclick="delTransfer('${t.id}')">✕</button></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="10"><div class="empty">No transfers</div></td></tr>';
+}
+function renderTransferStats(){
+  const trs=DB.g('transfers');
+  const el=document.getElementById('tr-stats');if(!el)return;
+  const byType={};trs.forEach(t=>{byType[t.type]=(byType[t.type]||0)+1;});
+  el.innerHTML=`
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-family:var(--fh);font-size:28px;font-weight:700;color:var(--accent2)">${trs.length}</div>
+      <div style="font-size:11px;color:var(--muted)">Total Transfers</div>
+    </div>
+    <div style="margin-top:8px">${Object.entries(byType).map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px">${k}</span>
+        <span style="font-weight:700;color:var(--accent2)">${v}</span>
+      </div>`).join('')||'<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px">No data</div>'}</div>`;
+}
+function delTransfer(id){
+  try{requireAuth(false);}catch(e){return;}
+  DB.s('transfers',DB.g('transfers').filter(t=>t.id!==id));
+  renderTransferRows();renderTransferStats();
+}
 
 // ──────────────────────────────────────────
 //  REACTIVATE EMPLOYEE
@@ -5257,11 +5525,14 @@ function expCSV(type){
     hdr=['Employee','EmpID','Month','Gross','Basic','HRA','Transport','Medical','Special','Bonus','PF','Tax','Absent Ded','Net Pay','Method','Status'];
     rows=DB.g('payroll').map(p=>{const e=emps.find(x=>x.id===p.empId)||{};return[`${e.fn||''} ${e.ln||''}`,e.eid,p.month,p.gross,p.basic,p.hra,p.ta,p.ma,p.sa,p.bonus,p.pf,p.tax,p.absent,p.net,p.method,p.status];});
   }else if(type==='increment'){
-    hdr=['Employee','EmpID','Dept','Date','Prev Salary','New Salary','Amount','Pct%','Reason'];
-    rows=DB.g('increments').map(ic=>{const e=emps.find(x=>x.id===ic.empId)||{};return[`${e.fn||''} ${e.ln||''}`,e.eid,e.dept,ic.date,ic.prevSal,ic.newSal,ic.amount,ic.pct,ic.reason];});
+    hdr=['Employee','EmpID','Dept','Type','Date','Prev Salary','New Salary','Amount','Pct%','Prev Designation','New Designation','Reason'];
+    rows=DB.g('increments').map(ic=>{const e=emps.find(x=>x.id===ic.empId)||{};return[`${e.fn||''} ${e.ln||''}`,e.eid,e.dept,ic.type||'increment',ic.date,ic.prevSal,ic.newSal,ic.amount,ic.pct,ic.prevTitle||'',ic.newTitle||'',ic.reason];});
   }else if(type==='separation'){
     hdr=['Employee','EmpID','BU','Dept','Type','Last Day','Settlement','Clearance','Reason'];
     rows=DB.g('separations').map(s=>{const e=emps.find(x=>x.id===s.empId)||{};return[`${e.fn||''} ${e.ln||''}`,e.eid,e.bu,e.dept,s.type,s.lastDay,s.settlement,s.clearance,s.reason];});
+  }else if(type==='transfer'){
+    hdr=['Employee','EmpID','Date','Type','From BU','From Dept','From Section','To BU','To Dept','To Section','Old Designation','New Designation','Reason'];
+    rows=DB.g('transfers').map(t=>{const e=emps.find(x=>x.id===t.empId)||{};return[`${e.fn||''} ${e.ln||''}`,e.eid,t.date,t.type,t.fromBU,t.fromDept,t.fromSec||'',t.toBU,t.toDept,t.toSec||'',t.fromTitle||'',t.toTitle||'',t.reason];});
   }else if(type==='bu'){
     hdr=['Business Unit','Total','Active','Depts','Avg Salary'];
     const bus=DB.g('bus');
@@ -5273,7 +5544,7 @@ function expCSV(type){
   }
   const co=DB.go('company',{name:'My Company'});
   // Build Excel-compatible HTML with colors matching print format
-  const titleMap={employees:'Employee Directory',attendance:'Attendance Report',leave:'Leave Report',payroll:'Payroll Report',increment:'Increment Report',separation:'Separation Report',bu:'Business Unit Report',manpower:'Manpower Report'};
+  const titleMap={employees:'Employee Directory',attendance:'Attendance Report',leave:'Leave Report',payroll:'Payroll Report',increment:'Increment Report',separation:'Separation Report',transfer:'Transfer Report',bu:'Business Unit Report',manpower:'Manpower Report'};
   const rowsHtml=rows.map((r,ri)=>`<tr style="background:${ri%2===0?'#ffffff':'#f9f9f9'}">${r.map(c=>`<td>${c===null||c===undefined?'':c}</td>`).join('')}</tr>`).join('');
   const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>${type}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
@@ -5345,13 +5616,17 @@ function printReport(type){
   }else if(type==='separation'){
     title='Separation Report';
     const seps=[...DB.g('separations')].sort((a,b)=>b.created-a.created);
-    // Separation print: only real exits (exclude reactivated corrections)
     const activeSeps=seps.filter(s=>!s.reactivated);
     tableHTML=`<table><thead><tr><th>Emp ID</th><th>Employee</th><th>Dept</th><th>BU</th><th>Type</th><th>Last Day</th><th>Settlement</th><th>Clearance</th><th>Reason</th></tr></thead><tbody>
     ${activeSeps.map(s=>{const e=emps.find(x=>x.id===s.empId)||{};return`<tr><td><strong>${e.eid||'—'}</strong></td><td>${e.fn||'?'} ${e.ln||''}</td><td>${e.dept||'—'}</td><td>${e.bu||'—'}</td><td>${s.type}</td><td>${s.lastDay||'—'}</td><td>${s.settlement?'৳'+N(s.settlement):'—'}</td><td>${s.clearance}</td><td>${s.reason||'—'}</td></tr>`;}).join('')}
     </tbody></table>`;
+  }else if(type==='transfer'){
+    title='Transfer Report';
+    const trs=[...DB.g('transfers')].sort((a,b)=>b.created-a.created);
+    tableHTML=`<table><thead><tr><th>Emp ID</th><th>Employee</th><th>Date</th><th>Type</th><th>From BU</th><th>From Dept</th><th>To BU</th><th>To Dept</th><th>Designation</th><th>Reason</th></tr></thead><tbody>
+    ${trs.map(t=>{const e=emps.find(x=>x.id===t.empId)||{};return`<tr><td><strong>${e.eid||'—'}</strong></td><td>${e.fn||'?'} ${e.ln||''}</td><td>${t.date}</td><td>${t.type}</td><td>${t.fromBU||'—'}</td><td>${t.fromDept||'—'}${t.fromSec?' › '+t.fromSec:''}</td><td><strong>${t.toBU||'—'}</strong></td><td><strong>${t.toDept||'—'}${t.toSec?' › '+t.toSec:''}</strong></td><td>${t.toTitle||t.fromTitle||'—'}</td><td>${t.reason||'—'}</td></tr>`;}).join('')}
+    </tbody></table>`;
   }
-  openPrintWindow(title,tableHTML,co);
 }
 
 function openPrintWindow(title,tableHTML,co){
@@ -5386,6 +5661,7 @@ function printEmpProfile(id){
   const lvs=DB.g('leaves').filter(l=>l.empId===id);
   const prs=DB.g('payroll').filter(p=>p.empId===id);
   const incs=DB.g('increments').filter(i=>i.empId===id);
+  const trs=DB.g('transfers').filter(t=>t.empId===id);
   const co=DB.go('company',{name:'My Company'});
   const w=window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><title>Employee Profile</title>
@@ -5438,8 +5714,11 @@ function printEmpProfile(id){
     <div class="sum-b"><div class="sum-v" style="color:navy">${lvs.filter(l=>l.status==='Approved').reduce((s,l)=>s+(l.days||0),0)}</div><div class="sum-l">Leave Days</div></div>
     <div class="sum-b"><div class="sum-v" style="color:#1b4332">৳${(prs.reduce((s,p)=>s+(p.net||0),0)/1000).toFixed(0)}K</div><div class="sum-l">Total Paid</div></div>
     <div class="sum-b"><div class="sum-v" style="color:purple">${incs.length}</div><div class="sum-l">Increments</div></div>
+    <div class="sum-b"><div class="sum-v" style="color:var(--accent2)">${incs.filter(i=>i.type==='promotion').length}</div><div class="sum-l">Promotions</div></div>
+    <div class="sum-b"><div class="sum-v" style="color:teal">${trs.length}</div><div class="sum-l">Transfers</div></div>
   </div>
-  ${incs.length?`<table><thead><tr><th>Date</th><th>Prev Salary</th><th>New Salary</th><th>Amount</th><th>%</th><th>Reason</th></tr></thead><tbody>${incs.map(ic=>`<tr><td>${ic.date}</td><td>৳${N(ic.prevSal)}</td><td>৳${N(ic.newSal)}</td><td>৳${N(ic.amount)}</td><td>${ic.pct}%</td><td>${ic.reason||'—'}</td></tr>`).join('')}</tbody></table>`:''}
+  ${incs.length?`<h3 style="margin:16px 0 8px">Increment / Promotion History</h3><table><thead><tr><th>Type</th><th>Date</th><th>Prev Salary</th><th>New Salary</th><th>Amount</th><th>%</th><th>Designation Change</th><th>Reason</th></tr></thead><tbody>${incs.map(ic=>`<tr><td>${ic.type==='promotion'?'🎖 Promotion':'↑ Increment'}</td><td>${ic.date}</td><td>৳${N(ic.prevSal)}</td><td>৳${N(ic.newSal)}</td><td>৳${N(ic.amount)}</td><td>${ic.pct}%</td><td>${ic.type==='promotion'&&ic.prevTitle?ic.prevTitle+' → '+ic.newTitle:'—'}</td><td>${ic.reason||'—'}</td></tr>`).join('')}</tbody></table>`:''}
+  ${trs.length?`<h3 style="margin:16px 0 8px">Transfer History</h3><table><thead><tr><th>Date</th><th>Type</th><th>From Dept</th><th>To Dept</th><th>Designation</th><th>Reason</th></tr></thead><tbody>${trs.map(t=>`<tr><td>${t.date}</td><td>${t.type}</td><td>${t.fromBU||''}${t.fromDept?' / '+t.fromDept:''}</td><td><strong>${t.toBU||''}${t.toDept?' / '+t.toDept:''}</strong></td><td>${t.toTitle||t.fromTitle||'—'}</td><td>${t.reason||'—'}</td></tr>`).join('')}</tbody></table>`:''}
   <script>window.onload=()=>{window.print()}<\/script>
   </body></html>`);w.document.close();
 }
@@ -6476,10 +6755,12 @@ function renderDesigList(){
       <button class="btn btn-d btn-xs" onclick="delDesig('${d.replace(/'/g,"\\'")}')">Remove</button>
     </div>`).join(''):'<div style="color:var(--muted);font-size:12px">No designations yet</div>';
 }
-function fillDesigSel(){
-  const sel=document.getElementById('e-title');if(!sel)return;
+function fillDesigSel(targetId, keepCurrent){
+  const selId=targetId||'e-title';
+  const sel=document.getElementById(selId);if(!sel)return;
   const list=DB.g('designations');
-  sel.innerHTML='<option value="">Select Designation</option>'+list.map(d=>`<option value="${d}">${d}</option>`).join('');
+  const prefix=keepCurrent?'<option value="">Keep Current</option>':'<option value="">Select Designation</option>';
+  sel.innerHTML=prefix+list.map(d=>`<option value="${d}">${d}</option>`).join('');
 }
 
 // ── Shifts ──
@@ -7376,6 +7657,7 @@ function printEmpProfileFull(id){
   const att=DB.g('attendance').filter(a=>a.empId===id);
   const lvs=DB.g('leaves').filter(l=>l.empId===id);
   const incs=DB.g('increments').filter(i=>i.empId===id);
+  const trs=DB.g('transfers').filter(t=>t.empId===id);
   const co=DB.go('company',{name:'My Company'});
   const now=new Date();const joinDt=e.join?new Date(e.join):null;
   let svcStr='—';
@@ -7395,7 +7677,8 @@ function printEmpProfileFull(id){
   leaveTypes.forEach(t=>{
     leaveTaken[t.code]=lvs.filter(l=>l.status==='Approved'&&l.type&&l.type.includes(t.match)).reduce((s,l)=>s+(l.days||0),0);
   });
-  const incRows=incs.map(ic=>`<tr><td>${ic.date||'—'}</td><td>৳${N(ic.prevSal)}</td><td>৳${N(ic.newSal)}</td><td>+৳${N(ic.amount)} (${ic.pct}%)</td><td>${ic.reason||'—'}</td></tr>`).join('');
+  const incRows=incs.map(ic=>`<tr><td>${ic.type==='promotion'?'🎖 Promotion':'↑ Increment'}</td><td>${ic.date||'—'}</td><td>৳${N(ic.prevSal)}</td><td>৳${N(ic.newSal)}</td><td>+৳${N(ic.amount)} (${ic.pct}%)</td><td>${ic.type==='promotion'&&ic.prevTitle?ic.prevTitle+' → '+ic.newTitle:'—'}</td><td>${ic.reason||'—'}</td></tr>`).join('');
+  const trRows=trs.map(t=>`<tr><td>${t.date}</td><td>${t.type}</td><td>${t.fromBU||'—'} / ${t.fromDept||'—'}${t.fromSec?' › '+t.fromSec:''}</td><td><strong>${t.toBU||'—'} / ${t.toDept||'—'}${t.toSec?' › '+t.toSec:''}</strong></td><td>${t.toTitle||t.fromTitle||'—'}</td><td>${t.reason||'—'}</td></tr>`).join('');
   const prs=DB.g('payroll').filter(p=>p.empId===id);
   const w=window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><title>Employee Profile</title>
@@ -7453,11 +7736,16 @@ function printEmpProfileFull(id){
       <tr><td style="text-align:left;font-weight:600">Balance of Leave</td>${leaveTypes.map(t=>`<td>${leaveTaken[t.code]?'-'+leaveTaken[t.code]:'—'}</td>`).join('')}</tr>
     </tbody>
   </table>
-  <div class="section-hd">INCREMENT HISTORY</div>
+  <div class="section-hd">INCREMENT / PROMOTION HISTORY</div>
   <table class="inc-tbl">
-    <thead><tr><th>Date</th><th>Previous Salary</th><th>New Salary</th><th>Increment</th><th>Remarks</th></tr></thead>
-    <tbody>${incRows||'<tr><td colspan="5">No increment records</td></tr>'}</tbody>
+    <thead><tr><th>Type</th><th>Date</th><th>Previous Salary</th><th>New Salary</th><th>Increment</th><th>Designation Change</th><th>Remarks</th></tr></thead>
+    <tbody>${incRows||'<tr><td colspan="7">No increment records</td></tr>'}</tbody>
   </table>
+  ${trRows?`<div class="section-hd">TRANSFER HISTORY</div>
+  <table class="inc-tbl">
+    <thead><tr><th>Date</th><th>Type</th><th>From</th><th>To</th><th>Designation</th><th>Remarks</th></tr></thead>
+    <tbody>${trRows}</tbody>
+  </table>`:''}
   <div style="margin-top:28px;display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #ddd">
     <div style="text-align:center;width:160px"><div style="border-top:1px solid #000;padding-top:4px;font-size:9.5px">Employee Signature</div></div>
     <div style="text-align:center;width:160px"><div style="border-top:1px solid #000;padding-top:4px;font-size:9.5px">HR Officer</div></div>
