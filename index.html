@@ -1052,7 +1052,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
     <div class="sb-logo"><em>HR</em> HR Suite Pro</div>
     <div class="sb-sub">Bangladesh HR · Supabase Cloud</div>
   </div>
-  <select class="bu-sb" id="global-bu" onchange="onBuChange()">
+  <select class="bu-sb" id="global-bu" onchange="renderDash()">
     <option value="">All Business Units</option>
   </select>
   <div class="sb-nav" id="sb-nav"><!-- filled by JS --></div>
@@ -3526,25 +3526,6 @@ function fBU(arr){
   return arr.filter(e=>(!bu||e.bu===bu)&&(!allowed||allowed.includes(e.bu)));
 }
 
-function onBuChange(){
-  // Re-render whichever section is currently visible
-  const active=document.querySelector('.section.active');
-  if(!active)return;
-  const id=active.id;
-  if(id==='sec-dashboard')renderDash();
-  else if(id==='sec-employees')renderEmpTbl();
-  else if(id==='sec-attendance'){renderAttLog();renderAttToday();}
-  else if(id==='sec-leave')renderLvRows();
-  else if(id==='sec-payroll')renderPayRows();
-  else if(id==='sec-increment')renderIncrRows();
-  else if(id==='sec-separation')renderSepRows();
-  else if(id==='sec-transfer'){renderTransferRows();renderTransferStats();}
-  else if(id==='sec-manpower')renderManpower&&renderManpower();
-  else if(id==='sec-employees-list')renderEmpTbl();
-  // Always refresh dash data in background for stat cards
-  if(id!=='sec-dashboard')renderDash();
-}
-
 // ══════════════════════════════════════════
 //  DASHBOARD
 // ══════════════════════════════════════════
@@ -4098,7 +4079,10 @@ function saveAtt(){
   const att=DB.g('attendance');
   att.push({id:DB.id(),empId,date:v('at-dt')||today(),status:v('at-st'),
     checkIn:ci,checkOut:co,lateMin:lm>0?lm:0,earlyMin:em>0?em:0,note:v('at-note')});
-  DB.s('attendance',att);renderAttLog();renderAttToday();document.getElementById('at-flag').textContent='';toast('✓ Saved');
+  DB.s('attendance',att);renderAttLog();renderAttToday();
+  // Refresh job card if open and shows this employee
+  if(document.getElementById('sec-job-card')?.classList.contains('active'))renderJobCard();
+  document.getElementById('at-flag').textContent='';toast('✓ Saved');
 }
 
 function renderAttLog(){
@@ -4110,11 +4094,9 @@ function renderAttLog(){
   if(fs)att=att.filter(a=>a.status===fs);
   att=[...att].sort((a,b)=>b.date.localeCompare(a.date));
   const emps=DB.g('employees');
-  const globalBu=gBU();
   if(sq)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return (e.fn+' '+e.ln+' '+(e.eid||'')).toLowerCase().includes(sq);});
   if(fid)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return (e.eid||'').toLowerCase().includes(fid);});
-  const buFilter=fbu||globalBu;
-  if(buFilter)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return e.bu===buFilter;});
+  if(fbu)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return e.bu===fbu;});
   if(fdept)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return e.dept===fdept;});
   if(fsec)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return e.section===fsec;});
   document.getElementById('at-rows').innerHTML=att.length?att.map(a=>{
@@ -4149,10 +4131,7 @@ function _fillAttFilters(){
   if(secSel)secSel.innerHTML='<option value="">All Section</option>'+secs.map(s=>`<option>${s}</option>`).join('');
 }
 function renderAttToday(){
-  const globalBu=gBU();
-  const empsAll=DB.g('employees');
-  let att=DB.g('attendance').filter(a=>a.date===today());
-  if(globalBu)att=att.filter(a=>{const e=empsAll.find(x=>x.id===a.empId)||{};return e.bu===globalBu;});
+  const att=DB.g('attendance').filter(a=>a.date===today());
   const c={Present:0,Absent:0,Late:0,'Early Out':0,'Half Day':0,'Late & Early Out':0};
   att.forEach(a=>{if(c[a.status]!==undefined)c[a.status]++;});
   document.getElementById('at-today').innerHTML=Object.entries(c).map(([k,vl])=>`
@@ -4252,9 +4231,7 @@ function saveLv(){
 function renderLvRows(){
   const sq=(v('lv-srch')||'').toLowerCase(), fst=v('lv-fst')||'';
   const emps=DB.g('employees');
-  const globalBu=gBU();
   let rows=[...DB.g('leaves')].sort((a,b)=>b.created-a.created);
-  if(globalBu)rows=rows.filter(l=>{const e=emps.find(x=>x.id===l.empId)||{};return e.bu===globalBu;});
   if(sq)rows=rows.filter(l=>{const e=emps.find(x=>x.id===l.empId)||{};return (e.fn+' '+e.ln+' '+(e.eid||'')).toLowerCase().includes(sq);});
   if(fst)rows=rows.filter(l=>l.status===fst);
   document.getElementById('lv-rows').innerHTML=rows.length?rows.map(l=>`
@@ -4646,8 +4623,6 @@ function renderPayRows(){
   const fmo=document.getElementById('py-fmo')?.value||'';
   let pr=[...DB.g('payroll')].sort((a,b)=>b.created-a.created);
   const emps=DB.g('employees');
-  const globalBu=gBU();
-  if(globalBu)pr=pr.filter(p=>{const e=emps.find(x=>x.id===p.empId)||{};return e.bu===globalBu;});
   if(q)pr=pr.filter(p=>{const e=emps.find(x=>x.id===p.empId)||{};return((e.eid||'')+' '+e.fn+' '+e.ln).toLowerCase().includes(q);});
   if(fmo)pr=pr.filter(p=>p.month===fmo);
   document.getElementById('py-rows').innerHTML=pr.length?pr.map(p=>{
@@ -4931,9 +4906,7 @@ function saveIncr(){
   toast(msg,5000);
 }
 function renderIncrRows(){
-  const globalBu=gBU();
-  let incs=[...DB.g('increments')].sort((a,b)=>b.created-a.created);
-  if(globalBu){const emps=DB.g('employees');incs=incs.filter(ic=>{const e=emps.find(x=>x.id===ic.empId)||{};return e.bu===globalBu;});}
+  const incs=[...DB.g('increments')].sort((a,b)=>b.created-a.created);
   document.getElementById('ic-rows').innerHTML=incs.length?incs.map(ic=>{
     const e=DB.g('employees').find(x=>x.id===ic.empId)||{};
     const isPromo=ic.type==='promotion';
@@ -5000,10 +4973,8 @@ function saveSep(){
   renderSepRows();renderSepStats();toast('✓ Separation processed');
 }
 function renderSepRows(){
-  const globalBu=gBU();
-  const empsAll=DB.g('employees');
-  let all=[...DB.g('separations')].sort((a,b)=>b.created-a.created);
-  if(globalBu)all=all.filter(s=>{const e=empsAll.find(x=>x.id===s.empId)||{};return e.bu===globalBu;});
+  const all=[...DB.g('separations')].sort((a,b)=>b.created-a.created);
+  // Split: active separations vs reactivated (corrections)
   const active=all.filter(s=>!s.reactivated);
   const reactivated=all.filter(s=>s.reactivated);
   const mkRow=(s,showReact)=>{
@@ -5120,10 +5091,7 @@ function saveTransfer(){
   toast(`✓ ${emp.fn} ${emp.ln} transferred: ${fromDept}→${toDept} effective ${date}`,5000);
 }
 function renderTransferRows(){
-  const globalBu=gBU();
-  const empsAll=DB.g('employees');
-  let trs=[...DB.g('transfers')].sort((a,b)=>b.created-a.created);
-  if(globalBu)trs=trs.filter(t=>{const e=empsAll.find(x=>x.id===t.empId)||{};return e.bu===globalBu||t.fromBU===globalBu||t.toBU===globalBu;});
+  const trs=[...DB.g('transfers')].sort((a,b)=>b.created-a.created);
   const tbody=document.getElementById('tr-rows');if(!tbody)return;
   tbody.innerHTML=trs.length?trs.map(t=>{
     const e=DB.g('employees').find(x=>x.id===t.empId)||{};
@@ -5463,11 +5431,21 @@ function renderJobCard(){
         <div style="margin-bottom:10px">
           <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Attendance Summary</div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">
-            ${Object.entries(summary).map(([k,vl])=>`
-              <div style="text-align:center;padding:8px;background:var(--bg);border-radius:7px;border:1px solid var(--border)">
-                <div style="font-family:var(--fh);font-size:18px;font-weight:700">${vl}</div>
-                <div style="font-size:10px;color:var(--muted)">${k} <span class="badge b-x" style="font-size:9px">${k==='Off'?'W':(JC_ABBR[k]||k)}</span></div>
-              </div>`).join('')}
+            ${(()=>{
+              const totalLeaveDays=Object.values(leaveSummary).reduce((s,v)=>s+v,0);
+              const cards=Object.entries(summary).map(([k,vl])=>`
+                <div style="text-align:center;padding:8px;background:var(--bg);border-radius:7px;border:1px solid var(--border)">
+                  <div style="font-family:var(--fh);font-size:18px;font-weight:700">${vl}</div>
+                  <div style="font-size:10px;color:var(--muted)">${k} <span class="badge b-x" style="font-size:9px">${k==='Off'?'W':(JC_ABBR[k]||k)}</span></div>
+                </div>`);
+              // Insert Total Leave card right after Absent (index 1)
+              const leaveCard=`<div style="text-align:center;padding:8px;background:var(--il);border-radius:7px;border:1.5px solid var(--info)">
+                <div style="font-family:var(--fh);font-size:18px;font-weight:700;color:var(--info)">${totalLeaveDays}</div>
+                <div style="font-size:10px;color:var(--info)">Total Leave <span class="badge b-b" style="font-size:9px">L</span></div>
+              </div>`;
+              cards.splice(2,0,leaveCard);
+              return cards.join('');
+            })()}
           </div>
           <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Leave Summary (by Type)</div>
           <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:10px">
@@ -5550,6 +5528,7 @@ function printJobCard(){
   <div class="sum">
     <div class="sum-box"><div class="sum-v" style="color:green">${summary.Present}</div><div class="sum-l">Present (P)</div></div>
     <div class="sum-box"><div class="sum-v" style="color:red">${summary.Absent}</div><div class="sum-l">Absent (A)</div></div>
+    <div class="sum-box" style="border-color:navy;background:#f0f4ff"><div class="sum-v" style="color:navy">${Object.values(leaveSummary).reduce((s,v)=>s+v,0)}</div><div class="sum-l" style="color:navy">Total Leave (L)</div></div>
     <div class="sum-box"><div class="sum-v" style="color:orange">${summary.Late}</div><div class="sum-l">Late (L)</div></div>
     <div class="sum-box"><div class="sum-v" style="color:purple">${summary['Early Out']}</div><div class="sum-l">Early Out (EO)</div></div>
     <div class="sum-box"><div class="sum-v" style="color:teal">${summary['Half Day']}</div><div class="sum-l">Half Day (H)</div></div>
@@ -7955,9 +7934,14 @@ function _lpSelect(containerId, empId){
   const p=_pickers[containerId];if(!p)return;
   const emp=DB.g('employees').find(e=>e.id===empId);if(!emp)return;
   p.selectedId=empId;
-  // Set hidden input
+  // Set hidden input and dispatch change event
   const hidden=document.getElementById(p.hiddenId);
-  if(hidden){hidden.value=empId;hidden.dispatchEvent(new Event('change'));}
+  if(hidden){
+    hidden.value=empId;
+    hidden.dispatchEvent(new Event('change'));
+    // Also fire input event for broader compatibility
+    hidden.dispatchEvent(new Event('input'));
+  }
   // Update input text
   const inp=document.getElementById(containerId+'-inp');
   if(inp)inp.value=emp.fn+' '+emp.ln+(emp.eid?' ('+emp.eid+')':'');
