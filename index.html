@@ -3598,12 +3598,13 @@ function fillGlobalBU(){
 function gBU(){return document.getElementById('global-bu').value;}
 function fBU(arr){
   const bu=gBU();
-  // Admin: never restrict by bu_access — always full access
   if(currentUser?.app_role==='hr_admin') return bu?arr.filter(e=>e.bu===bu):arr;
-  // Non-admin: filter by allowed BUs if set
   const allowed=currentUser?.bu_access&&currentUser.bu_access.length?currentUser.bu_access:null;
   return arr.filter(e=>(!bu||e.bu===bu)&&(!allowed||allowed.includes(e.bu)));
 }
+// Always use this instead of DB.g('employees') in render functions
+function getEmps(){return fBU(DB.g('employees'));}
+function getActiveEmps(){return getEmps().filter(e=>e.status!=='Terminated');}
 
 // ══════════════════════════════════════════
 //  DASHBOARD
@@ -3920,21 +3921,18 @@ function renderEmpTbl(){
   const qid=(v('em-srch-id')||'').toLowerCase().trim();
   const idClrBtn=document.getElementById('em-srch-id-clr');
   if(idClrBtn)idClrBtn.classList.toggle('vis',qid.length>0);
-  let emps=DB.g('employees');
-  if(bu)emps=emps.filter(e=>e.bu===bu);
+  let emps=getEmps();
   if(q)emps=emps.filter(e=>(e.fn+' '+e.ln+' '+(e.dept||'')+' '+(e.bu||'')+' '+(e.title||'')).toLowerCase().includes(q));
   if(qid)emps=emps.filter(e=>(e.eid||'').toLowerCase().includes(qid));
   if(fbu)emps=emps.filter(e=>e.bu===fbu);
   if(fst)emps=emps.filter(e=>e.status===fst);
   if(ftype)emps=emps.filter(e=>e.type===ftype);
   if(fdept)emps=emps.filter(e=>e.dept===fdept);
-  // Update count
   const countEl=document.getElementById('em-count');
-  if(countEl)countEl.textContent=`Showing ${emps.length} of ${DB.g('employees').length} employees`;
-  // Refresh dept filter options
+  if(countEl)countEl.textContent=`Showing ${emps.length} of ${getEmps().length} employees`;
   const deptSel=document.getElementById('em-fdept');
   if(deptSel&&deptSel.options.length<=1){
-    const depts=[...new Set(DB.g('employees').map(e=>e.dept).filter(Boolean))].sort();
+    const depts=[...new Set(getEmps().map(e=>e.dept).filter(Boolean))].sort();
     deptSel.innerHTML='<option value="">All Depts</option>'+depts.map(d=>`<option value="${d}">${d}</option>`).join('');
   }
   document.getElementById('em-rows').innerHTML=emps.length?emps.map(e=>`
@@ -4276,16 +4274,19 @@ function renderAttLog(){
   const fd=v('at-fd')||'',fs=v('at-fs')||'',sq=(v('at-srch')||'').toLowerCase();
   const fid=(v('at-fid')||'').toLowerCase();
   const fbu=v('at-fbu')||'',fdept=v('at-fdept')||'',fsec=v('at-fsec')||'';
-  let att=DB.g('attendance');
+  const globalBu=gBU();
+  const allEmps=DB.g('employees');
+  // Build allowed emp ID set from global BU
+  const allowedEmpIds=new Set(getEmps().map(e=>e.id));
+  let att=DB.g('attendance').filter(a=>allowedEmpIds.has(a.empId));
   if(fd)att=att.filter(a=>a.date===fd);
   if(fs)att=att.filter(a=>a.status===fs);
   att=[...att].sort((a,b)=>b.date.localeCompare(a.date));
-  const emps=DB.g('employees');
-  if(sq)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return (e.fn+' '+e.ln+' '+(e.eid||'')).toLowerCase().includes(sq);});
-  if(fid)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return (e.eid||'').toLowerCase().includes(fid);});
-  if(fbu)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return e.bu===fbu;});
-  if(fdept)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return e.dept===fdept;});
-  if(fsec)att=att.filter(a=>{const e=emps.find(x=>x.id===a.empId)||{};return e.section===fsec;});
+  if(sq)att=att.filter(a=>{const e=allEmps.find(x=>x.id===a.empId)||{};return (e.fn+' '+e.ln+' '+(e.eid||'')).toLowerCase().includes(sq);});
+  if(fid)att=att.filter(a=>{const e=allEmps.find(x=>x.id===a.empId)||{};return (e.eid||'').toLowerCase().includes(fid);});
+  if(fbu)att=att.filter(a=>{const e=allEmps.find(x=>x.id===a.empId)||{};return e.bu===fbu;});
+  if(fdept)att=att.filter(a=>{const e=allEmps.find(x=>x.id===a.empId)||{};return e.dept===fdept;});
+  if(fsec)att=att.filter(a=>{const e=allEmps.find(x=>x.id===a.empId)||{};return e.section===fsec;});
   document.getElementById('at-rows').innerHTML=att.length?att.map(a=>{
     const e=emps.find(x=>x.id===a.empId)||{};
     const deptInfo=[e.bu,e.dept,e.section].filter(Boolean).join(' › ');
@@ -4324,7 +4325,8 @@ function _fillAttFilters(){
   if(secSel)secSel.innerHTML='<option value="">All Section</option>'+secs.map(s=>`<option>${s}</option>`).join('');
 }
 function renderAttToday(){
-  const att=DB.g('attendance').filter(a=>a.date===today());
+  const allowedIds=new Set(getEmps().map(e=>e.id));
+  const att=DB.g('attendance').filter(a=>a.date===today()&&allowedIds.has(a.empId));
   const c={Present:0,Absent:0,Late:0,'Early Out':0,'Half Day':0,'Late & Early Out':0};
   att.forEach(a=>{if(c[a.status]!==undefined)c[a.status]++;});
   document.getElementById('at-today').innerHTML=Object.entries(c).map(([k,vl])=>`
@@ -4485,7 +4487,8 @@ function saveLv(){
 function renderLvRows(){
   const sq=(v('lv-srch')||'').toLowerCase(), fst=v('lv-fst')||'';
   const emps=DB.g('employees');
-  let rows=[...DB.g('leaves')].sort((a,b)=>b.created-a.created);
+  const allowedIds=new Set(getEmps().map(e=>e.id));
+  let rows=[...DB.g('leaves')].filter(l=>allowedIds.has(l.empId)).sort((a,b)=>b.created-a.created);
   if(sq)rows=rows.filter(l=>{const e=emps.find(x=>x.id===l.empId)||{};return (e.fn+' '+e.ln+' '+(e.eid||'')).toLowerCase().includes(sq);});
   if(fst)rows=rows.filter(l=>l.status===fst);
   document.getElementById('lv-rows').innerHTML=rows.length?rows.map(l=>`
@@ -4875,7 +4878,8 @@ function savePay(){
 function renderPayRows(){
   const q=(document.getElementById('py-srch')?.value||'').toLowerCase();
   const fmo=document.getElementById('py-fmo')?.value||'';
-  let pr=[...DB.g('payroll')].sort((a,b)=>b.created-a.created);
+  const allowedIds=new Set(getEmps().map(e=>e.id));
+  let pr=[...DB.g('payroll')].filter(p=>allowedIds.has(p.empId)).sort((a,b)=>b.created-a.created);
   const emps=DB.g('employees');
   if(q)pr=pr.filter(p=>{const e=emps.find(x=>x.id===p.empId)||{};return((e.eid||'')+' '+e.fn+' '+e.ln).toLowerCase().includes(q);});
   if(fmo)pr=pr.filter(p=>p.month===fmo);
@@ -5160,7 +5164,8 @@ function saveIncr(){
   toast(msg,5000);
 }
 function renderIncrRows(){
-  const incs=[...DB.g('increments')].sort((a,b)=>b.created-a.created);
+  const allowedIds=new Set(getEmps().map(e=>e.id));
+  const incs=[...DB.g('increments')].filter(ic=>allowedIds.has(ic.empId)).sort((a,b)=>b.created-a.created);
   document.getElementById('ic-rows').innerHTML=incs.length?incs.map(ic=>{
     const e=DB.g('employees').find(x=>x.id===ic.empId)||{};
     const isPromo=ic.type==='promotion';
@@ -5227,10 +5232,14 @@ function saveSep(){
   renderSepRows();renderSepStats();toast('✓ Separation processed');
 }
 function renderSepRows(){
-  const all=[...DB.g('separations')].sort((a,b)=>b.created-a.created);
-  // Split: active separations vs reactivated (corrections)
-  const active=all.filter(s=>!s.reactivated);
-  const reactivated=all.filter(s=>s.reactivated);
+  const allowedIds=new Set(getEmps().map(e=>e.id));
+  // Also include terminated employees from this BU (they may not pass getEmps filter)
+  const bu=gBU();
+  const allEmpsInBu=bu?DB.g('employees').filter(e=>e.bu===bu):DB.g('employees');
+  const buIds=new Set(allEmpsInBu.map(e=>e.id));
+  const allSeps=[...DB.g('separations')].filter(s=>buIds.has(s.empId)).sort((a,b)=>b.created-a.created);
+  const active=allSeps.filter(s=>!s.reactivated);
+  const reactivated=allSeps.filter(s=>s.reactivated);
   const mkRow=(s,showReact)=>{
     const e=DB.g('employees').find(x=>x.id===s.empId)||{};
     const reactBtn=showReact?`<button class="btn btn-p btn-xs" onclick="openReactivate('${s.empId}','${s.id}')">↩ Reactivate</button>`:'';
@@ -5345,7 +5354,10 @@ function saveTransfer(){
   toast(`✓ ${emp.fn} ${emp.ln} transferred: ${fromDept}→${toDept} effective ${date}`,5000);
 }
 function renderTransferRows(){
-  const trs=[...DB.g('transfers')].sort((a,b)=>b.created-a.created);
+  const bu=gBU();
+  const allEmpsInBu=bu?DB.g('employees').filter(e=>e.bu===bu):DB.g('employees');
+  const buIds=new Set(allEmpsInBu.map(e=>e.id));
+  let trs=[...DB.g('transfers')].filter(t=>!bu||(buIds.has(t.empId)||t.fromBU===bu||t.toBU===bu)).sort((a,b)=>b.created-a.created);
   const tbody=document.getElementById('tr-rows');if(!tbody)return;
   tbody.innerHTML=trs.length?trs.map(t=>{
     const e=DB.g('employees').find(x=>x.id===t.empId)||{};
@@ -5435,7 +5447,7 @@ function confirmReactivate(){
 //  MANPOWER
 // ══════════════════════════════════════════
 function renderManpower(){
-  const bu=gBU();let emps=DB.g('employees');if(bu)emps=emps.filter(e=>e.bu===bu);
+  let emps=getEmps();
   const m=moStr();
   document.getElementById('mp-stats').innerHTML=`
     <div class="sc" style="--ac:var(--a2)"><div class="sl">Headcount</div><div class="sv" style="color:var(--a2)">${emps.length}</div><div class="ss">all status</div></div>
@@ -8138,7 +8150,7 @@ function EmpPicker(containerId, hiddenId, {placeholder='Search employee…', inc
 
 function _lpEmps(containerId){
   const p=_pickers[containerId];
-  let emps=DB.g('employees');
+  let emps=fBU(DB.g('employees')); // Always respect global BU selection
   if(!p.includeTerminated) emps=emps.filter(e=>e.status!=='Terminated');
   return emps;
 }
