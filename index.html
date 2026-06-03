@@ -1212,25 +1212,93 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
 
     <!-- ATTENDANCE -->
     <div id="sec-attendance" class="section">
-      <div class="g2" style="max-width:900px;margin-bottom:0">
-        <div class="card">
-          <div class="ch"><span class="ct">Mark Attendance</span></div>
-          <div class="cb">
-            <div class="fg fg2">
-              <div class="fgrp"><label>Employee</label><div id="at-em-pick" class="ls-wrap"></div><input type="hidden" id="at-em"></div>
-              <div class="fgrp"><label>Date</label><input type="date" id="at-dt"></div>
-              <div class="fgrp"><label>Status</label>
-                <select id="at-st"><option>Present</option><option>Absent</option><option>Late</option><option>Half Day</option><option>Early Out</option><option>Late &amp; Early Out</option></select>
-              </div>
-              <div class="fgrp"><label>Check In</label><input type="time" id="at-in" onchange="detectAtt()"></div>
-              <div class="fgrp"><label>Check Out</label><input type="time" id="at-out" onchange="detectAtt()"></div>
-              <div class="fgrp"><label>Note</label><input id="at-note" placeholder="Optional"></div>
-            </div>
-            <div id="at-flag" style="font-size:11px;color:var(--gold);min-height:14px;margin:5px 0"></div>
-            <div class="frow"><button class="btn btn-p" onclick="saveAtt()">Save</button></div>
+
+      <!-- Mark Attendance Card -->
+      <div class="card" style="max-width:900px;margin-bottom:14px">
+        <div class="ch">
+          <span class="ct">Mark Attendance</span>
+          <div style="display:flex;gap:6px">
+            <button id="att-tab-single" class="btn btn-p btn-sm" onclick="setAttTab('single')">Single</button>
+            <button id="att-tab-bulk"   class="btn btn-s btn-sm" onclick="setAttTab('bulk')">Bulk / Multiple</button>
           </div>
         </div>
-        <div class="card"><div class="ch"><span class="ct">Today's Summary</span></div><div class="cb" id="at-today"></div></div>
+
+        <!-- SINGLE MODE -->
+        <div id="att-single-mode" class="cb">
+          <div class="fg fg2">
+            <div class="fgrp"><label>Employee</label><div id="at-em-pick" class="ls-wrap"></div><input type="hidden" id="at-em"></div>
+            <div class="fgrp"><label>Date</label><input type="date" id="at-dt"></div>
+            <div class="fgrp"><label>Status</label>
+              <select id="at-st"><option>Present</option><option>Absent</option><option>Late</option><option>Half Day</option><option>Early Out</option><option>Late &amp; Early Out</option></select>
+            </div>
+            <div class="fgrp"><label>Check In</label><input type="time" id="at-in" onchange="detectAtt()"></div>
+            <div class="fgrp"><label>Check Out</label><input type="time" id="at-out" onchange="detectAtt()"></div>
+            <div class="fgrp"><label>Note</label><input id="at-note" placeholder="Optional"></div>
+          </div>
+          <div id="at-flag" style="font-size:11px;color:var(--gold);min-height:14px;margin:5px 0"></div>
+          <div class="frow"><button class="btn btn-p" onclick="saveAtt()">Save</button></div>
+        </div>
+
+        <!-- BULK MODE -->
+        <div id="att-bulk-mode" class="cb" style="display:none">
+          <!-- Bulk filters -->
+          <div class="fg fg3" style="margin-bottom:12px">
+            <div class="fgrp">
+              <label>Business Unit</label>
+              <select id="bulk-bu" onchange="renderBulkEmpList()">
+                <option value="">— Select BU —</option>
+              </select>
+            </div>
+            <div class="fgrp">
+              <label>Department</label>
+              <select id="bulk-dept" onchange="renderBulkEmpList()">
+                <option value="">All Departments</option>
+              </select>
+            </div>
+            <div class="fgrp">
+              <label>Date</label>
+              <input type="date" id="bulk-dt">
+            </div>
+            <div class="fgrp">
+              <label>Status (for selected)</label>
+              <select id="bulk-st">
+                <option>Present</option><option>Absent</option><option>Late</option>
+                <option>Half Day</option><option>Early Out</option><option>Late &amp; Early Out</option>
+              </select>
+            </div>
+            <div class="fgrp">
+              <label>Check In</label>
+              <input type="time" id="bulk-in">
+            </div>
+            <div class="fgrp">
+              <label>Check Out</label>
+              <input type="time" id="bulk-out">
+            </div>
+          </div>
+
+          <!-- Employee checklist -->
+          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px">
+            <div style="padding:8px 12px;background:var(--as);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600">
+                <input type="checkbox" id="bulk-sel-all" onchange="bulkToggleAll(this.checked)"> Select All
+              </label>
+              <span id="bulk-sel-count" style="font-size:11px;color:var(--muted)">0 selected</span>
+            </div>
+            <div id="bulk-emp-list" style="max-height:280px;overflow-y:auto;padding:8px 12px">
+              <div class="empty" style="padding:20px">Select a Business Unit to load employees</div>
+            </div>
+          </div>
+
+          <div class="frow">
+            <button class="btn btn-p" onclick="saveBulkAtt()">✓ Save Attendance for Selected</button>
+            <span id="bulk-result" style="font-size:12px;color:var(--muted)"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:900px;margin-bottom:14px">
+        <div class="ch"><span class="ct">Today's Summary</span></div>
+        <div class="cb" id="at-today"></div>
       </div>
       <div class="card" style="margin-top:16px;max-width:900px">
         <!-- ══ PROCESS ATTENDANCE ══ -->
@@ -1269,10 +1337,21 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
         <div style="padding:8px 14px;background:var(--as);border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <span style="font-size:10px;font-weight:700;color:var(--a2);text-transform:uppercase;letter-spacing:.5px">Filter By:</span>
           <input id="at-fid" placeholder="Emp ID" oninput="renderAttLog()" style="font-size:11.5px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;width:100px;font-family:var(--fm)">
+          <button class="btn btn-xs btn-d" title="Delete all attendance records for the Employee ID entered above" onclick="(function(){const eid=(document.getElementById('at-fid').value||'').trim().toLowerCase();if(!eid){toast('Enter an Employee ID first');return;}const emps=DB.g('employees');const emp=emps.find(e=>(e.eid||'').toLowerCase()===eid);if(!emp){toast('Employee ID not found');return;}delAttByEmpId(emp.id);})()">🗑 Del by ID</button>
           <select id="at-fbu" onchange="renderAttLog()" style="font-size:11.5px;padding:4px 8px;border:1px solid var(--border);border-radius:5px"><option value="">All BU</option></select>
           <select id="at-fdept" onchange="renderAttLog()" style="font-size:11.5px;padding:4px 8px;border:1px solid var(--border);border-radius:5px"><option value="">All Dept</option></select>
           <select id="at-fsec" onchange="renderAttLog()" style="font-size:11.5px;padding:4px 8px;border:1px solid var(--border);border-radius:5px"><option value="">All Section</option></select>
           <button class="btn btn-xs btn-s" onclick="clearAttFilters()">✕ Clear</button>
+        </div>
+
+        <!-- ── Date-wise Punch Delete ── -->
+        <div style="padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Date-wise Delete:</span>
+          <input type="date" id="at-del-date" style="font-size:11.5px;padding:4px 8px;border:1px solid var(--border);border-radius:5px">
+          <button class="btn btn-xs btn-s" onclick="delPunchByDate('in')" title="Clear punch-in for all records on this date">⊖ Clear In</button>
+          <button class="btn btn-xs btn-s" onclick="delPunchByDate('out')" title="Clear punch-out for all records on this date">⊖ Clear Out</button>
+          <button class="btn btn-xs btn-d" onclick="delPunchByDate('both')" title="Delete all attendance records on this date">🗑 Delete All</button>
+          <span style="font-size:10.5px;color:var(--muted)">Applies to all visible (filtered) records on selected date</span>
         </div>
         <table class="dt"><thead><tr><th>Employee</th><th>BU / Dept / Section</th><th>Date</th><th>Status</th><th>In</th><th>Out</th><th>Late(m)</th><th>Early(m)</th><th>Note</th><th></th></tr></thead>
         <tbody id="at-rows"></tbody></table>
@@ -3484,7 +3563,7 @@ function refresh(p){
     if(!_pickers['edit-emp-picker']){EmpPicker('edit-emp-picker','edit-emp-sel',{placeholder:'Search employee to edit…',includeTerminated:false});}
     else{_lpRenderDrop('edit-emp-picker','');}
   }
-  if(p==='attendance'){fillEmpSel('at-em');document.getElementById('at-dt').value=today();_fillAttFilters();renderAttLog();renderAttToday();}
+  if(p==='attendance'){fillEmpSel('at-em');document.getElementById('at-dt').value=today();document.getElementById('bulk-dt').value=today();_fillAttFilters();renderAttLog();renderAttToday();initBulkAtt();}
   if(p==='leave'){fillEmpSel('lv-em');renderLvRows();renderLvBal();}
   if(p==='payroll'){fillEmpSel('py-em');renderPayRows();document.getElementById('py-mo').value=moStr();_initPyRowMonthFilter();_initPyProcPicker();}
   if(p==='increment'){fillEmpSel('ic-em');fillDesigSel('ic-new-title');renderIncrRows();renderIncrSum();}
@@ -4047,6 +4126,109 @@ function cancelEmpEdit(){
 // ══════════════════════════════════════════
 //  ATTENDANCE
 // ══════════════════════════════════════════
+
+// ── Attendance Tab Switch ──
+function setAttTab(tab){
+  document.getElementById('att-single-mode').style.display=tab==='single'?'':'none';
+  document.getElementById('att-bulk-mode').style.display=tab==='bulk'?'':'none';
+  document.getElementById('att-tab-single').className='btn btn-sm '+(tab==='single'?'btn-p':'btn-s');
+  document.getElementById('att-tab-bulk').className='btn btn-sm '+(tab==='bulk'?'btn-p':'btn-s');
+  if(tab==='bulk')initBulkAtt();
+}
+
+function initBulkAtt(){
+  // Fill BU selector — only BUs from existing employees
+  const emps=DB.g('employees').filter(e=>e.status!=='Terminated');
+  const bus=[...new Set(emps.map(e=>e.bu).filter(Boolean))].sort();
+  const buSel=document.getElementById('bulk-bu');
+  const curBu=buSel.value;
+  buSel.innerHTML='<option value="">— Select BU —</option>'+bus.map(b=>`<option${b===curBu?' selected':''}>${b}</option>`).join('');
+  document.getElementById('bulk-dt').value=document.getElementById('bulk-dt').value||today();
+  renderBulkEmpList();
+}
+
+function renderBulkEmpList(){
+  const bu=v('bulk-bu'),dept=v('bulk-dept');
+  const listEl=document.getElementById('bulk-emp-list');
+  const countEl=document.getElementById('bulk-sel-count');
+
+  if(!bu){
+    listEl.innerHTML='<div class="empty" style="padding:20px">Select a Business Unit to load employees</div>';
+    countEl.textContent='0 selected';
+    return;
+  }
+
+  // Strict BU filter — only this BU's active employees
+  let emps=DB.g('employees').filter(e=>e.bu===bu&&e.status!=='Terminated');
+
+  // Fill dept dropdown from this BU only
+  const depts=[...new Set(emps.map(e=>e.dept).filter(Boolean))].sort();
+  const deptSel=document.getElementById('bulk-dept');
+  const curDept=deptSel.value;
+  deptSel.innerHTML='<option value="">All Departments</option>'+depts.map(d=>`<option${d===curDept?' selected':''}>${d}</option>`).join('');
+
+  if(dept)emps=emps.filter(e=>e.dept===dept);
+
+  if(!emps.length){
+    listEl.innerHTML='<div class="empty" style="padding:16px">No active employees in this BU/Department</div>';
+    countEl.textContent='0 selected';
+    document.getElementById('bulk-sel-all').checked=false;
+    return;
+  }
+
+  listEl.innerHTML=emps.map(e=>`
+    <label style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12.5px">
+      <input type="checkbox" class="bulk-emp-cb" value="${e.id}" onchange="updateBulkCount()">
+      <div style="flex:1">
+        <span style="font-weight:600">${e.fn} ${e.ln}</span>
+        <span style="font-family:var(--fm);font-size:11px;color:var(--accent2);margin-left:6px">${e.eid||''}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:6px">${e.dept||''}</span>
+      </div>
+    </label>`).join('');
+
+  updateBulkCount();
+}
+
+function bulkToggleAll(checked){
+  document.querySelectorAll('.bulk-emp-cb').forEach(cb=>cb.checked=checked);
+  updateBulkCount();
+}
+
+function updateBulkCount(){
+  const total=document.querySelectorAll('.bulk-emp-cb').length;
+  const selected=document.querySelectorAll('.bulk-emp-cb:checked').length;
+  document.getElementById('bulk-sel-count').textContent=`${selected} of ${total} selected`;
+  document.getElementById('bulk-sel-all').checked=selected===total&&total>0;
+  document.getElementById('bulk-sel-all').indeterminate=selected>0&&selected<total;
+}
+
+function saveBulkAtt(){
+  try{requireAuth(false);}catch(e){return;}
+  const selected=[...document.querySelectorAll('.bulk-emp-cb:checked')].map(cb=>cb.value);
+  if(!selected.length){toast('Select at least one employee');return;}
+  const date=v('bulk-dt')||today();
+  const status=v('bulk-st');
+  const ci=v('bulk-in'),co=v('bulk-out');
+  const lm=ci?Math.max(0,tdiff(CFG.workStart||'09:00',ci)):0;
+  const em=co?Math.max(0,tdiff(co,CFG.workEnd||'18:00')):0;
+  let att=DB.g('attendance');
+  let updated=0,added=0;
+  selected.forEach(empId=>{
+    const idx=att.findIndex(a=>a.empId===empId&&a.date===date);
+    const record={id:idx>=0?att[idx].id:DB.id(),empId,date,status,
+      checkIn:ci||'',checkOut:co||'',
+      lateMin:lm>0?lm:0,earlyMin:em>0?em:0,note:''};
+    if(idx>=0){att[idx]=record;updated++;}
+    else{att.push(record);added++;}
+  });
+  DB.s('attendance',att);
+  renderAttLog();renderAttToday();
+  if(document.getElementById('sec-job-card')?.classList.contains('active'))renderJobCard();
+  const msg=[];if(added)msg.push(`${added} added`);if(updated)msg.push(`${updated} updated`);
+  document.getElementById('bulk-result').textContent=`✓ ${msg.join(', ')} for ${date}`;
+  toast(`✓ Attendance saved for ${selected.length} employee(s)`);
+}
+
 function detectAtt(){
   const ci=v('at-in'),co=v('at-out');
   const ws=CFG.workStart||'09:00',we=CFG.workEnd||'18:00';
@@ -4077,12 +4259,17 @@ function saveAtt(){
   const lm=ci?Math.max(0,tdiff(CFG.workStart||'09:00',ci)):0;
   const em=co?Math.max(0,tdiff(co,CFG.workEnd||'18:00')):0;
   const att=DB.g('attendance');
-  att.push({id:DB.id(),empId,date:v('at-dt')||today(),status:v('at-st'),
-    checkIn:ci,checkOut:co,lateMin:lm>0?lm:0,earlyMin:em>0?em:0,note:v('at-note')});
+  const date=v('at-dt')||today();
+  // Update existing record for same employee+date instead of duplicating
+  const idx=att.findIndex(a=>a.empId===empId&&a.date===date);
+  const record={id:idx>=0?att[idx].id:DB.id(),empId,date,status:v('at-st'),
+    checkIn:ci,checkOut:co,lateMin:lm>0?lm:0,earlyMin:em>0?em:0,note:v('at-note')};
+  if(idx>=0){att[idx]=record;toast('✓ Updated');}
+  else{att.push(record);toast('✓ Saved');}
   DB.s('attendance',att);renderAttLog();renderAttToday();
-  // Refresh job card if open and shows this employee
+  // Refresh job card if open
   if(document.getElementById('sec-job-card')?.classList.contains('active'))renderJobCard();
-  document.getElementById('at-flag').textContent='';toast('✓ Saved');
+  document.getElementById('at-flag').textContent='';
 }
 
 function renderAttLog(){
@@ -4111,7 +4298,13 @@ function renderAttLog(){
       <td class="mono" style="color:${a.lateMin>0?'var(--gold)':'var(--muted)'}">${a.lateMin>0?a.lateMin+'m':'—'}</td>
       <td class="mono" style="color:${a.earlyMin>0?'var(--pur)':'var(--muted)'}">${a.earlyMin>0?a.earlyMin+'m':'—'}</td>
       <td style="font-size:11.5px;color:var(--muted)">${a.note||''}</td>
-      <td><button class="btn btn-d btn-xs" onclick="delAtt('${a.id}')">✕</button></td>
+      <td>
+        <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">
+          ${a.checkIn?`<button class="btn btn-s btn-xs" title="Clear punch-in only" onclick="clearPunch('${a.id}','in')">⊖ In</button>`:''}
+          ${a.checkOut?`<button class="btn btn-s btn-xs" title="Clear punch-out only" onclick="clearPunch('${a.id}','out')">⊖ Out</button>`:''}
+          <button class="btn btn-d btn-xs" title="Delete full record" onclick="delAtt('${a.id}')">✕ Both</button>
+        </div>
+      </td>
     </tr>`}).join(''):'<tr><td colspan="10"><div class="empty">No records</div></td></tr>';
 }
 function clearAttFilters(){
@@ -4140,7 +4333,68 @@ function renderAttToday(){
     </div>`).join('');
 }
 function delAtt(id){
-  try{requireAuth(false);}catch(e){return;}DB.s('attendance',DB.g('attendance').filter(a=>a.id!==id));renderAttLog();renderAttToday();}
+  try{requireAuth(false);}catch(e){return;}DB.s('attendance',DB.g('attendance').filter(a=>a.id!==id));renderAttLog();renderAttToday();
+  if(document.getElementById('sec-job-card')?.classList.contains('active'))renderJobCard();
+}
+
+function clearPunch(id, type){
+  try{requireAuth(false);}catch(e){return;}
+  const att=DB.g('attendance');
+  const rec=att.find(a=>a.id===id);
+  if(!rec){toast('Record not found');return;}
+  if(type==='in'){rec.checkIn='';rec.lateMin=0;}
+  else if(type==='out'){rec.checkOut='';rec.earlyMin=0;}
+  DB.s('attendance',att);renderAttLog();renderAttToday();
+  if(document.getElementById('sec-job-card')?.classList.contains('active'))renderJobCard();
+  toast(`✓ Punch-${type} cleared`);
+}
+
+function delAttByEmpId(empId){
+  try{requireAuth(false);}catch(e){return;}
+  if(!empId){toast('No employee selected');return;}
+  const att=DB.g('attendance');
+  const count=att.filter(a=>a.empId===empId).length;
+  if(!count){toast('No attendance records for this employee');return;}
+  if(!confirm(`Delete ALL ${count} attendance record(s) for this employee?`))return;
+  DB.s('attendance',att.filter(a=>a.empId!==empId));renderAttLog();renderAttToday();
+  if(document.getElementById('sec-job-card')?.classList.contains('active'))renderJobCard();
+  toast(`✓ Deleted ${count} records`);
+}
+
+function delPunchByDate(type){
+  try{requireAuth(false);}catch(e){return;}
+  const date=document.getElementById('at-del-date').value;
+  if(!date){toast('Select a date first');return;}
+  // Respect active filters (BU, dept, emp ID)
+  const fbu=v('at-fbu')||'',fdept=v('at-fdept')||'',fid=(v('at-fid')||'').toLowerCase();
+  const emps=DB.g('employees');
+  let att=DB.g('attendance');
+  let targets=att.filter(a=>{
+    if(a.date!==date)return false;
+    const e=emps.find(x=>x.id===a.empId)||{};
+    if(fbu&&e.bu!==fbu)return false;
+    if(fdept&&e.dept!==fdept)return false;
+    if(fid&&!(e.eid||'').toLowerCase().includes(fid))return false;
+    return true;
+  });
+  if(!targets.length){toast('No records found for this date');return;}
+  const action=type==='in'?'clear punch-in for':type==='out'?'clear punch-out for':`delete ALL`;
+  if(!confirm(`${action} ${targets.length} record(s) on ${date}?`))return;
+  const targetIds=new Set(targets.map(a=>a.id));
+  if(type==='both'){
+    att=att.filter(a=>!targetIds.has(a.id));
+  } else {
+    att=att.map(a=>{
+      if(!targetIds.has(a.id))return a;
+      if(type==='in')return{...a,checkIn:'',lateMin:0};
+      if(type==='out')return{...a,checkOut:'',earlyMin:0};
+      return a;
+    });
+  }
+  DB.s('attendance',att);renderAttLog();renderAttToday();
+  if(document.getElementById('sec-job-card')?.classList.contains('active'))renderJobCard();
+  toast(`✓ Done — ${targets.length} record(s) updated`);
+}
 
 // ══════════════════════════════════════════
 //  ATTENDANCE PROCESSING (bulk absent fill)
@@ -5439,9 +5693,9 @@ function renderJobCard(){
                   <div style="font-size:10px;color:var(--muted)">${k} <span class="badge b-x" style="font-size:9px">${k==='Off'?'W':(JC_ABBR[k]||k)}</span></div>
                 </div>`);
               // Insert Total Leave card right after Absent (index 1)
-              const leaveCard=`<div style="text-align:center;padding:8px;background:var(--il);border-radius:7px;border:1.5px solid var(--info)">
-                <div style="font-family:var(--fh);font-size:18px;font-weight:700;color:var(--info)">${totalLeaveDays}</div>
-                <div style="font-size:10px;color:var(--info)">Total Leave <span class="badge b-b" style="font-size:9px">L</span></div>
+              const leaveCard=`<div style="text-align:center;padding:8px;background:var(--bg);border-radius:7px;border:1px solid var(--border)">
+                <div style="font-family:var(--fh);font-size:18px;font-weight:700">${totalLeaveDays}</div>
+                <div style="font-size:10px;color:var(--muted)">Total Leave <span class="badge b-x" style="font-size:9px">L</span></div>
               </div>`;
               cards.splice(2,0,leaveCard);
               return cards.join('');
@@ -5528,7 +5782,7 @@ function printJobCard(){
   <div class="sum">
     <div class="sum-box"><div class="sum-v" style="color:green">${summary.Present}</div><div class="sum-l">Present (P)</div></div>
     <div class="sum-box"><div class="sum-v" style="color:red">${summary.Absent}</div><div class="sum-l">Absent (A)</div></div>
-    <div class="sum-box" style="border-color:navy;background:#f0f4ff"><div class="sum-v" style="color:navy">${Object.values(leaveSummary).reduce((s,v)=>s+v,0)}</div><div class="sum-l" style="color:navy">Total Leave (L)</div></div>
+    <div class="sum-box"><div class="sum-v">${Object.values(leaveSummary).reduce((s,v)=>s+v,0)}</div><div class="sum-l">Total Leave (L)</div></div>
     <div class="sum-box"><div class="sum-v" style="color:orange">${summary.Late}</div><div class="sum-l">Late (L)</div></div>
     <div class="sum-box"><div class="sum-v" style="color:purple">${summary['Early Out']}</div><div class="sum-l">Early Out (EO)</div></div>
     <div class="sum-box"><div class="sum-v" style="color:teal">${summary['Half Day']}</div><div class="sum-l">Half Day (H)</div></div>
